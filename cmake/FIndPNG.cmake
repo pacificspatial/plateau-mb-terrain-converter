@@ -1,0 +1,46 @@
+
+
+set(_PNG_VERSION_SUFFIXES 17 16 15 14 12)
+foreach(v IN LISTS _PNG_VERSION_SUFFIXES)
+  list(APPEND PNG_NAMES png${v} libpng${v} libpng${v}_static)
+endforeach()
+unset(_PNG_VERSION_SUFFIXES)
+
+IF(WIN32)
+
+  IF (MINGW)
+    FIND_PATH(PNG_INCLUDE_DIR png.h /usr/local/include /usr/include c:/msys/local/include PATH_SUFFIXES libpng)
+    FIND_LIBRARY(PNG_LIBRARY NAMES ${PNG_NAMES} PATHS /usr/local/lib /usr/lib c:/msys/local/lib)
+  ENDIF (MINGW)
+
+  IF (MSVC)
+    FIND_PATH(PNG_INCLUDE_DIR png.h)
+
+    FIND_LIBRARY(PNG_LIBRARY NAMES ${PNG_NAMES} libpng PATHS 
+	    "$ENV{LIB_DIR}/lib" $ENV{LIB} /usr/lib c:/msys/local/lib)
+    IF (PNG_LIBRARY)
+      SET (
+         PNG_LIBRARY;odbc32;odbccp32 
+         CACHE STRING INTERNAL)
+    ENDIF (PNG_LIBRARY)
+  ENDIF (MSVC)
+
+# ELSE(WIN32)
+
+ENDIF(WIN32)
+
+IF (PNG_INCLUDE_DIR AND PNG_LIBRARY)
+   SET(PNG_FOUND TRUE)
+ENDIF (PNG_INCLUDE_DIR AND PNG_LIBRARY)
+
+IF(PNG_FOUND)
+  MESSAGE("found libpng.")
+   MESSAGE(PNG_INCLUDE_DIR=${PNG_INCLUDE_DIR})
+   MESSAGE(PNG_LIBRARY=${PNG_LIBRARY})
+ELSE(PNG_FOUND)
+   MESSAGE(PNG_INCLUDE_DIR=${PNG_INCLUDE_DIR})
+   MESSAGE(PNG_LIBRARY=${PNG_LIBRARY})
+   MESSAGE(SEND_ERROR "Could not find libpng")
+
+ENDIF (PNG_FOUND)
+  

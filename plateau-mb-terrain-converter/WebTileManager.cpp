@@ -1,0 +1,375 @@
+
+#include "WebTIleManager.h"
+
+#include <vector>
+#include <filesystem>
+#include <algorithm>
+
+
+#define ERRORCHECK(f) \
+  if ( f != SQLITE_OK ) goto ERROR;
+
+
+
+WebTileManager::WebTileManager(
+	const std::string& strOutputDirectory,
+	const int nMinZoomLevel,
+	const int nMaxZoomLevel )
+	:
+	mbValid( false ),
+	mpathOutputDirectory( strOutputDirectory ),
+	mnMinZoomLevel( nMinZoomLevel ),
+	mnMaxZoomLevel( nMaxZoomLevel ),
+	mpDb( nullptr )
+{
+	if ( !std::filesystem::exists( mpathOutputDirectory ) )
+	{
+		return;
+	}
+
+	if ( !std::filesystem::is_directory( mpathOutputDirectory ) )
+	{
+		return;
+	}
+	
+	std::filesystem::path pathDB = mpathOutputDirectory;
+	pathDB += std::tmpnam(nullptr);
+	ERRORCHECK( sqlite3_open_v2( pathDB.u8string().c_str(), &mpDb,
+		 SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr ) );
+
+	ERRORCHECK( sqlite3_exec( 
+		mpDb, 
+		"create table plist( tile_x integer, tile_y integer, tile_z integer, pixel_u integer, pixel_v integer, r integer, g integer, b integer a integer",
+		nullptr, nullptr, nullptr ) );
+
+	mbValid = true;
+	return;
+
+ERROR:
+	mstrErrorMsg = sqlite3_errstr( sqlite3_errcode(mpDb) );
+}
+
+
+WebTileManager::~WebTileManager()
+{
+}
+
+
+bool WebTileManager::pushPixelInfo( const TILE_PIXEL_INFO& info )
+{
+	sqlite3_stmt *pStmt;
+	ERRORCHECK( sqlite3_prepare_v2( mpDb, "insert into plist(tile_x, tile_y, tile_z, pixel_u, pixel_v, r, g, b, a) values( ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", -1, &pStmt, nullptr ) );
+	ERRORCHECK( sqlite3_bind_int( pStmt, 1, info.tileNum.nX) );
+	ERRORCHECK( sqlite3_bind_int( pStmt, 2, info.tileNum.nY) );
+	ERRORCHECK( sqlite3_bind_int( pStmt, 3, info.tileNum.nZ) );
+	ERRORCHECK( sqlite3_bind_int64( pStmt, 4, info.pixCoord.nU) );
+	ERRORCHECK( sqlite3_bind_int64( pStmt, 5, info.pixCoord.nV) );
+	ERRORCHECK( sqlite3_bind_int( pStmt, 6, info.pixValues.nR) );
+	ERRORCHECK( sqlite3_bind_int( pStmt, 7, info.pixValues.nG) );
+	ERRORCHECK( sqlite3_bind_int( pStmt, 8, info.pixValues.nG) );
+	ERRORCHECK( sqlite3_bind_int( pStmt, 9, info.pixValues.nA) );
+
+	if ( sqlite3_step( pStmt) != SQLITE_DONE ) goto ERROR;
+	return true;
+
+ERROR:
+	mstrErrorMsg = sqlite3_errstr( sqlite3_errcode(mpDb) );
+	return false;
+}
+
+
+bool WebTileManager::createTilesFromDB()
+{
+	std::vector<TILE_COORD> vTiles;
+	sqlite3_stmt *pStmt;
+	std::filesystem::path pathDB = sqlite3_db_filename( mpDb, NULL );
+
+	ERRORCHECK( sqlite3_prepare_v2( mpDb, "select distinct tile_x, tile_y, tile_z from plist;", -1, &pStmt, nullptr ) );
+	while ( sqlite3_step( pStmt ) )
+	{
+		TILE_COORD tile;
+		tile.nX = sqlite3_column_int( pStmt, 0 );
+		tile.nY = sqlite3_column_int( pStmt, 1 );
+		tile.nZ = sqlite3_column_int( pStmt, 2 );
+		vTiles.push_back( tile );
+	}
+	sqlite3_finalize( pStmt );
+
+	uint8_t *pImgR = static_cast<uint8_t *>( CPLCalloc( TILE_PIXELS*TILE_PIXELS, 1 ) );
+	uint8_t *pImgG = static_cast<uint8_t *>( CPLCalloc( TILE_PIXELS*TILE_PIXELS, 1 ) );
+	uint8_t *pImgB = static_cast<uint8_t *>( CPLCalloc( TILE_PIXELS*TILE_PIXELS, 1 ) );
+	uint8_t *pImgA = static_cast<uint8_t *>( CPLCalloc( TILE_PIXELS*TILE_PIXELS, 1 ) );
+
+	ERRORCHECK( sqlite3_prepare_v2( mpDb, "select pixel_u,pixel_v,r,g,b,a from plist where tile_x=?1 and tile_y=?2 and tile_z=?3", -1, &pStmt, nullptr ) );
+	for ( auto &t : vTiles )
+	{
+		sqlite3_bind_int( pStmt, 1, t.nX );
+		sqlite3_bind_int( pStmt, 2, t.nY );
+		sqlite3_bind_int( pStmt, 3, t.nZ );
+		while ( sqlite3_step( pStmt ) )
+		{
+			int nU = sqlite3_column_int( pStmt, 0 );
+			int nV = sqlite3_column_int( pStmt, 1 );
+			uint8_t bR = static_cast<uint8_t>( sqlite3_column_int( pStmt, 2 ) );
+			uint8_t bG = static_cast<uint8_t>( sqlite3_column_int( pStmt, 3 ) );
+			uint8_t bB = static_cast<uint8_t>( sqlite3_column_int( pStmt, 4 ) );
+			uint8_t bA = static_cast<uint8_t>( sqlite3_column_int( pStmt, 5 ) );
+			pImgR[nV*TILE_PIXELS + nU] = bR;
+			pImgG[nV*TILE_PIXELS + nU] = bG;
+			pImgB[nV*TILE_PIXELS + nU] = bB;
+			pImgA[nV*TILE_PIXELS + nU] = bA;
+		}
+		auto strFName = makeOutputFilePath( mpathOutputDirectory, t.nX, t.nY, t.nZ );
+		auto bRes = writePng( strFName, pImgR, pImgG, pImgB, pImgA );
+		sqlite3_reset( pStmt );
+		std::memset( pImgR, 0x00, TILE_PIXELS*TILE_PIXELS );
+		std::memset( pImgG, 0x00, TILE_PIXELS*TILE_PIXELS );
+		std::memset( pImgB, 0x00, TILE_PIXELS*TILE_PIXELS );
+		std::memset( pImgA, 0x00, TILE_PIXELS*TILE_PIXELS );
+	}
+	CPLFree( pImgR );
+	CPLFree( pImgG );
+	CPLFree( pImgB );
+	CPLFree( pImgA );
+	sqlite3_finalize( pStmt );
+	sqlite3_close_v2( mpDb );
+	std::filesystem::remove( pathDB );
+	return true;
+
+ERROR:
+	mstrErrorMsg = sqlite3_errstr( sqlite3_errcode(mpDb) );
+	return false;
+}
+
+
+std::vector<TILE_COORD>&& WebTileManager::getOverviewTileList( std::vector<TILE_COORD>& vTileList )
+{
+	std::vector<TILE_COORD> vOverviewTiles;
+
+	for ( auto& t : vTileList )
+	{
+		TILE_COORD sOverviewTile;
+		sOverviewTile.nX = t.nX >> 1;
+		sOverviewTile.nY = t.nY >> 1;
+		sOverviewTile.nZ = t.nZ - 1;
+		vOverviewTiles.push_back( sOverviewTile );
+	}
+
+	std::sort( vOverviewTiles.begin(), vOverviewTiles.end() );
+	auto pEnd = std::unique( vOverviewTiles.begin(), vOverviewTiles.end() );
+	vOverviewTiles.erase( pEnd, vOverviewTiles.end() );
+
+	return std::move( vOverviewTiles );
+}
+
+
+bool WebTileManager::buildOverviews( std::vector<TILE_COORD> &vBaseTiles )
+{
+	auto&& vTiles = getOverviewTileList( vBaseTiles );
+	int nCurrentZoomLevel = vBaseTiles.front().nZ - 1;
+
+	while ( nCurrentZoomLevel > mnMinZoomLevel )
+	{
+		for ( auto& t : vTiles )
+		{
+			std::filesystem::path pathBassTileTL = 
+				makeOutputFilePath( mpathOutputDirectory, t.nX << 1, t.nY << 1, t.nZ );
+			std::filesystem::path pathBassTileTR = 
+				makeOutputFilePath( mpathOutputDirectory, t.nX << (1 + 1), t.nY << 1, t.nZ );
+			std::filesystem::path pathBassTileBL = 
+				makeOutputFilePath( mpathOutputDirectory, t.nX << 1, t.nY << (1 + 1), t.nZ );
+			std::filesystem::path pathBassTileBR = 
+				makeOutputFilePath( mpathOutputDirectory, t.nX << (1 + 1), t.nY << (1 + 1), t.nZ );
+			std::filesystem::path pathOutput = 
+				makeOutputFilePath( mpathOutputDirectory, t.nX, t.nY, t.nZ );
+			createOverviewTileFromQuadTiles(
+				pathOutput, pathBassTileTL, pathBassTileTR, pathBassTileBL, pathBassTileBR );
+		}
+
+		buildOverviews( vTiles );
+	}
+
+	return true;
+}
+
+
+std::string WebTileManager::makeOutputFilePath( std::filesystem::path pathBase, const int nX, const int nY, const int nZ )
+{
+	std::filesystem::path pathOutput = pathBase;
+
+	pathOutput /= std::to_string( nZ );
+	if ( std::filesystem::exists( pathOutput ) )
+	{
+		std::filesystem::create_directory( pathOutput );
+	}
+
+	pathOutput /= std::to_string( nY );
+	if ( std::filesystem::exists( pathOutput ) )
+	{
+		std::filesystem::create_directory( pathOutput );
+	}
+
+	pathOutput /= std::to_string( nZ ) + ".png";
+	return pathOutput.u8string();
+}
+
+
+bool WebTileManager::writePng( const std::string strFName, uint8_t *pImgR, uint8_t *pImgG, uint8_t *pImgB, uint8_t *pImgA )
+{
+	auto poDriver = GetGDALDriverManager()->GetDriverByName( "PNG" );
+	if ( !poDriver )
+	{
+		mstrErrorMsg = "GDAL Driver PNG was not found.";
+		return false;
+	}
+
+	auto poDS = poDriver->Create( strFName.c_str(), TILE_PIXELS, TILE_PIXELS, 4, GDT_Byte, nullptr );
+	auto poBandR = poDS->GetRasterBand( 1 );
+	auto poBandG = poDS->GetRasterBand( 2 );
+	auto poBandB = poDS->GetRasterBand( 3 );
+	auto poBandA = poDS->GetRasterBand( 4 );
+
+	poBandR->RasterIO( GF_Write, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgR, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+	poBandG->RasterIO( GF_Write, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgG, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+	poBandB->RasterIO( GF_Write, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgB, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+	poBandA->RasterIO( GF_Write, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgA, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+
+	GDALClose( poDS );
+
+	return true;
+}
+
+
+bool WebTileManager::createOverviewTileFromQuadTiles(
+	const std::filesystem::path &pathOutput,
+	const std::filesystem::path& pathTileTL,
+	const std::filesystem::path& pathTileTR,
+	const std::filesystem::path& pathTileBL,
+	const std::filesystem::path& pathTileBR )
+{
+	GDALAllRegister();
+
+	auto poDriver = GetGDALDriverManager()->GetDriverByName( "PNG" );
+	if ( !poDriver )
+	{
+		mstrErrorMsg = "GDAL Driver PNG was not found.";
+		return false;
+	}
+
+	auto poOutDS = poDriver->Create( pathOutput.u8string().c_str(), TILE_PIXELS, TILE_PIXELS, 4, GDT_Byte, nullptr );
+	uint8_t *pImgIn = static_cast<uint8_t *>( CPLMalloc( TILE_PIXELS*TILE_PIXELS ) );
+	CPLCalloc( TILE_PIXELS*TILE_PIXELS, 1 );
+
+	// nearest neighbour
+	GDALRasterIOExtraArg psExtraArg;
+	INIT_RASTERIO_EXTRA_ARG(psExtraArg);
+	psExtraArg.eResampleAlg = GRIORA_NearestNeighbour;
+
+	// TopLeft Image to output.
+	GDALDataset *poDS_TL = static_cast<GDALDataset *>( GDALOpen( pathTileTL.u8string().c_str(), GA_ReadOnly ) );
+	if ( poDS_TL )
+	{
+		GDALRasterBand *pobandIn = poDS_TL->GetRasterBand( 1 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutR = poOutDS->GetRasterBand( 1 );
+		bandOutR->RasterIO( GF_Write, 0, 0, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+
+		pobandIn = poDS_TL->GetRasterBand( 2 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutG = poOutDS->GetRasterBand( 2 );
+		bandOutG->RasterIO( GF_Write, 0, 0, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+
+		pobandIn = poDS_TL->GetRasterBand( 3 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutB = poOutDS->GetRasterBand( 1 );
+		bandOutB->RasterIO( GF_Write, 0, 0, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+
+		pobandIn = poDS_TL->GetRasterBand( 4 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutA = poOutDS->GetRasterBand( 4 );
+		bandOutA->RasterIO( GF_Write, 0, 0, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+		GDALClose( poDS_TL );
+	}
+
+	// TopRight Image to output.
+	GDALDataset *poDS_TR = static_cast<GDALDataset *>( GDALOpen( pathTileTR.u8string().c_str(), GA_ReadOnly ) );
+	if ( poDS_TR )
+	{
+		GDALRasterBand *pobandIn = poDS_TR->GetRasterBand( 1 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutR = poOutDS->GetRasterBand( 1 );
+		bandOutR->RasterIO( GF_Write, TILE_PIXELS/2, 0, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+
+		pobandIn = poDS_TR->GetRasterBand( 2 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutG = poOutDS->GetRasterBand( 2 );
+		bandOutG->RasterIO( GF_Write, TILE_PIXELS/2, 0, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+
+		pobandIn = poDS_TR->GetRasterBand( 3 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutB = poOutDS->GetRasterBand( 1 );
+		bandOutB->RasterIO( GF_Write, TILE_PIXELS/2, 0, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+
+		pobandIn = poDS_TR->GetRasterBand( 4 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutA = poOutDS->GetRasterBand( 4 );
+		bandOutA->RasterIO( GF_Write, TILE_PIXELS/2, 0, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+		GDALClose( poDS_TR );
+	}
+
+	// BottomLeft Image to output.
+	GDALDataset *poDS_BL = static_cast<GDALDataset *>( GDALOpen( pathTileBL.u8string().c_str(), GA_ReadOnly ) );
+	if ( poDS_BL )
+	{
+		GDALRasterBand *pobandIn = poDS_BL->GetRasterBand( 1 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutR = poOutDS->GetRasterBand( 1 );
+		bandOutR->RasterIO( GF_Write, 0, TILE_PIXELS/2, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+
+		pobandIn = poDS_BL->GetRasterBand( 2 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutG = poOutDS->GetRasterBand( 2 );
+		bandOutG->RasterIO( GF_Write, 0, TILE_PIXELS/2, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+
+		pobandIn = poDS_BL->GetRasterBand( 3 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutB = poOutDS->GetRasterBand( 1 );
+		bandOutB->RasterIO( GF_Write, 0, TILE_PIXELS/2, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+
+		pobandIn = poDS_BL->GetRasterBand( 4 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutA = poOutDS->GetRasterBand( 4 );
+		bandOutA->RasterIO( GF_Write, 0, TILE_PIXELS/2, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+		GDALClose( poDS_BL );
+	}
+
+	// BottomRight Image to output.
+	GDALDataset *poDS_BR = static_cast<GDALDataset *>( GDALOpen( pathTileTL.u8string().c_str(), GA_ReadOnly ) );
+	if ( poDS_BR )
+	{
+		GDALRasterBand *pobandIn = poDS_BR->GetRasterBand( 1 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutR = poOutDS->GetRasterBand( 1 );
+		bandOutR->RasterIO( GF_Write, TILE_PIXELS/2, TILE_PIXELS/2, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+
+		pobandIn = poDS_BR->GetRasterBand( 2 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutG = poOutDS->GetRasterBand( 2 );
+		bandOutG->RasterIO( GF_Write, TILE_PIXELS/2, TILE_PIXELS/2, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+
+		pobandIn = poDS_BR->GetRasterBand( 3 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutB = poOutDS->GetRasterBand( 1 );
+		bandOutB->RasterIO( GF_Write, TILE_PIXELS/2, TILE_PIXELS/2, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+
+		pobandIn = poDS_BR->GetRasterBand( 4 );
+		pobandIn->RasterIO( GF_Read, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+		auto bandOutA = poOutDS->GetRasterBand( 4 );
+		bandOutA->RasterIO( GF_Write, TILE_PIXELS/2, TILE_PIXELS/2, TILE_PIXELS/2, TILE_PIXELS/2, pImgIn, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0, &psExtraArg );
+		GDALClose( poDS_BR );
+	}
+
+	GDALClose( poOutDS );
+	return true;
+}
+
