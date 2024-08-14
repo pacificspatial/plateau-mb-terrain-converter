@@ -3,9 +3,6 @@
 
 #pragma once
 
-#include "WTMCalculator.h"
-#include "CityGMLManager.h"
-#include "WebTileManager.h"
 
 #include <string>
 #include <memory>
@@ -24,6 +21,11 @@
     //    #define PMTC_DLL
     //#endif
 #endif
+
+
+class WTMCalculator;
+class CityGMLManager;
+class WebTileManager;
 
 
 class PMTC_DLL PlateauMapboxTerrainConverter

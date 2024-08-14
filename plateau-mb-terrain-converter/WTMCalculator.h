@@ -19,14 +19,14 @@ public:
 
 public:
 	WTMCalculator() = delete;
-	WTMCalculator( int nEpsg, int nPixels, int nZoomLevel, COLOR_TYPE eType );
+	WTMCalculator( const OGRSpatialReference *poSrs, int nPixels, int nZoomLevel, COLOR_TYPE eType );
 	virtual ~WTMCalculator();
 
 	std::vector<TILE_PIXEL_INFO> getGridInTriangle( OGRPoint p1, OGRPoint p2, OGRPoint p3 );
 
 	static OGRPoint calcWTMResolution( uint32_t nZoomLevel, uint32_t nPixels );
 
-	inline void setSourceEPSG( int nEpsg ){ mnSourceEpsg = nEpsg; }
+	//inline void setSourceEPSG( int nEpsg ){ mnSourceEpsg = nEpsg; }
 	inline void setTilePixelSize( uint32_t nPixels ){ mnTilePixels = nPixels; }
 
 protected:
@@ -41,7 +41,7 @@ protected:
 	static double calcZ( OGRPoint &&p, const OGRPoint &tp1, const OGRPoint &tp2, const OGRPoint &tp3 );
 	PIXEL_INFO calcPix( double dZ );
 
-	uint32_t mnSourceEpsg;
+	OGRSpatialReference mSourceEpsg;
 	uint32_t mnZoomLevel;
 	uint32_t mnTilePixels;
 	bool mbValid;

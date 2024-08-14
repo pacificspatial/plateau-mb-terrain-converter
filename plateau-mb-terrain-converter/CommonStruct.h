@@ -48,9 +48,9 @@ using PIXEL_INFO = struct _pixel_info{
 };
 
 
-using TILE_PIXEL_INFO = struct _tile_pixel_info
+using TILE_PIXEL_INFO = struct _tile_pixel_infos
 {
+	TILE_COORD tileNum;
 	PIXEL_COORD pixCoord;
 	PIXEL_INFO pixValues;
-	TILE_COORD tileNum;
 };

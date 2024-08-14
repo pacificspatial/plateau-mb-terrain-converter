@@ -15,9 +15,9 @@
 
 
 
-WTMCalculator::WTMCalculator( int nEpsg, int nPixels, int nZoomLevel, COLOR_TYPE eType )
+WTMCalculator::WTMCalculator( const OGRSpatialReference *poSrs, int nPixels, int nZoomLevel, COLOR_TYPE eType )
 	: mbValid(false),
-	mnSourceEpsg(nEpsg),
+	mSourceEpsg(*poSrs),
 	mnTilePixels(nPixels),
 	mnZoomLevel(nZoomLevel),
 	meType(eType)
@@ -35,11 +35,13 @@ WTMCalculator::~WTMCalculator()
 
 void WTMCalculator::prepareTransformer()
 {
-	OGRSpatialReference poSrsSrc, poSrsDst;
+	OGRSpatialReference poSrsDst;
 
-	poSrsSrc.importFromEPSG( mnSourceEpsg );
+//	poSrsSrc.importFromEPSG( mnSourceEpsg );
 	poSrsDst.importFromEPSG( 3857 );
-	mTransform = OGRCreateCoordinateTransformation( &poSrsSrc, &poSrsDst );
+	OGRCoordinateTransformationOptions options = OGRCoordinateTransformationOptions();
+	options.SetBallparkAllowed( true );
+	mTransform = OGRCreateCoordinateTransformation( &mSourceEpsg, &poSrsDst, options );	
 }
 
 
@@ -91,7 +93,7 @@ TILE_PIXEL_INFO WTMCalculator::calcTilePixelCoordFromTotalPixelCoord( PIXEL_COOR
 	uint32_t nPixX = (uint32_t)( cPixCoord.nU - nTileX*mnTilePixels );
 	uint32_t nPixY = (uint32_t)( cPixCoord.nV - nTileY*mnTilePixels );
 
-	return {{nPixX, nPixY}, {0, 0, 0, 0}, {nTileX, nTileY, mnZoomLevel}};
+	return {{nTileX, nTileY, mnZoomLevel}, {nPixX, nPixY}, {0, 0, 0, 0}};
 } 
 
 
@@ -193,20 +195,18 @@ PIXEL_INFO WTMCalculator::calcPix( double dZ )
 std::vector<TILE_PIXEL_INFO> WTMCalculator::getGridInTriangle( OGRPoint p1, OGRPoint p2, OGRPoint p3 )
 {
 	int f1, f2, f3;
-	std::vector<TILE_PIXEL_INFO> vInfo = {
-		{0, 0}, {255, 255, 255, 0}, {0, 0, 0}
-	};
+	std::vector<TILE_PIXEL_INFO> vInfo;
 
 	auto bbox = calcTriangleToWTMBbox( p1, p2, p3 );
 
-	std::cout << bbox.tl.getX() << " | " << bbox.tl.getY() << std::endl;
-	std::cout << bbox.br.getX() << " | " << bbox.br.getY() << std::endl;
+	//std::cout << bbox.tl.getX() << " | " << bbox.tl.getY() << std::endl;
+	//std::cout << bbox.br.getX() << " | " << bbox.br.getY() << std::endl;
 
 	auto pixcoord_bbox_tl = calcTotalPixelCoord( {bbox.tl.getX(), bbox.tl.getY()} );
 	auto pixcoord_bbox_br = calcTotalPixelCoord( {bbox.br.getX(), bbox.br.getY()} );
 
-	std::cout << pixcoord_bbox_tl.nU <<  " | " << pixcoord_bbox_tl.nV << std::endl;
-	std::cout << pixcoord_bbox_br.nU <<  " | " << pixcoord_bbox_br.nV << std::endl;
+	//std::cout << pixcoord_bbox_tl.nU <<  " | " << pixcoord_bbox_tl.nV << std::endl;
+	//std::cout << pixcoord_bbox_br.nU <<  " | " << pixcoord_bbox_br.nV << std::endl;
 
 	//uint64_t nStartPixX = pixcoord_bbox_tl.nU;
 	//uint64_t nStartPixY = pixcoord_bbox_tl.nV;
@@ -229,7 +229,13 @@ std::vector<TILE_PIXEL_INFO> WTMCalculator::getGridInTriangle( OGRPoint p1, OGRP
 				double dZ = calcZ( {dSX, dSY}, p1, p2, p3 );
 				auto pixInfo = calcTilePixelCoordFromTotalPixelCoord( {u, v} );
 				pixInfo.pixValues = calcPix( dZ );
-				vInfo.push_back( pixInfo );
+				vInfo.push_back( std::move(pixInfo) );
+#ifdef _DEBUG
+				auto info = vInfo.back();
+				printf( "tile : [%7d %7d] pix : [%3d %3d] rgb : [%3d %3d %3d %3d]\n",
+						info.tileNum.nX, info.tileNum.nY, info.pixCoord.nU, info.pixCoord.nV, 
+						info.pixValues.nR, info.pixValues.nG, info.pixValues.nB, info.pixValues.nA );
+#endif
 			}
 			//dSX += mWTMResolution.x;
 			u++;

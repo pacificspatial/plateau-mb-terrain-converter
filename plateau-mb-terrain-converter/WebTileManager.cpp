@@ -8,6 +8,15 @@
 
 #define ERRORCHECK(f) \
   if ( f != SQLITE_OK ) goto ERROR;
+#define TRANSACTION_CHUNC 10000
+
+
+union outData
+{
+	char szData[256];
+	TILE_PIXEL_INFO info;
+};
+
 
 
 
@@ -17,10 +26,12 @@ WebTileManager::WebTileManager(
 	const int nMaxZoomLevel )
 	:
 	mbValid( false ),
+	mpDb( nullptr ),
+	mpStmt( nullptr ),
+	mnPushCount( 0 ),
 	mpathOutputDirectory( strOutputDirectory ),
 	mnMinZoomLevel( nMinZoomLevel ),
-	mnMaxZoomLevel( nMaxZoomLevel ),
-	mpDb( nullptr )
+	mnMaxZoomLevel( nMaxZoomLevel )
 {
 	if ( !std::filesystem::exists( mpathOutputDirectory ) )
 	{
@@ -31,16 +42,24 @@ WebTileManager::WebTileManager(
 	{
 		return;
 	}
-	
+
+#if 0
+	std::filesystem::path pathBaseOutput = mpathOutputDirectory;
+	pathBaseOutput /= "basetile.bin";
+	mstmOutputBaseTile.open( pathBaseOutput, std::ios::binary );
+#endif
+
 	std::filesystem::path pathDB = mpathOutputDirectory;
-	pathDB += std::tmpnam(nullptr);
+	pathDB /= "tempdb.sqlite";
 	ERRORCHECK( sqlite3_open_v2( pathDB.u8string().c_str(), &mpDb,
 		 SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr ) );
 
 	ERRORCHECK( sqlite3_exec( 
 		mpDb, 
-		"create table plist( tile_x integer, tile_y integer, tile_z integer, pixel_u integer, pixel_v integer, r integer, g integer, b integer a integer",
+		"create table plist( tile_x integer, tile_y integer, tile_z integer, pixel_u integer, pixel_v integer, r integer, g integer, b integer, a integer )",
 		nullptr, nullptr, nullptr ) );
+
+	ERRORCHECK( sqlite3_prepare_v2( mpDb, "insert into plist values( ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", -1, &mpStmt, nullptr ) );
 
 	mbValid = true;
 	return;
@@ -52,30 +71,65 @@ ERROR:
 
 WebTileManager::~WebTileManager()
 {
+#if 0
+	std::filesystem::path pathDB = sqlite3_db_filename( mpDb, NULL );
+	sqlite3_close_v2( mpDb );
+	if ( std::filesystem::exists( pathDB ) )
+	{
+		std::filesystem::remove( pathDB );
+	}
+#endif
 }
 
 
 bool WebTileManager::pushPixelInfo( const TILE_PIXEL_INFO& info )
 {
-	sqlite3_stmt *pStmt;
-	ERRORCHECK( sqlite3_prepare_v2( mpDb, "insert into plist(tile_x, tile_y, tile_z, pixel_u, pixel_v, r, g, b, a) values( ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", -1, &pStmt, nullptr ) );
-	ERRORCHECK( sqlite3_bind_int( pStmt, 1, info.tileNum.nX) );
-	ERRORCHECK( sqlite3_bind_int( pStmt, 2, info.tileNum.nY) );
-	ERRORCHECK( sqlite3_bind_int( pStmt, 3, info.tileNum.nZ) );
-	ERRORCHECK( sqlite3_bind_int64( pStmt, 4, info.pixCoord.nU) );
-	ERRORCHECK( sqlite3_bind_int64( pStmt, 5, info.pixCoord.nV) );
-	ERRORCHECK( sqlite3_bind_int( pStmt, 6, info.pixValues.nR) );
-	ERRORCHECK( sqlite3_bind_int( pStmt, 7, info.pixValues.nG) );
-	ERRORCHECK( sqlite3_bind_int( pStmt, 8, info.pixValues.nG) );
-	ERRORCHECK( sqlite3_bind_int( pStmt, 9, info.pixValues.nA) );
+	sqlite3_reset( mpStmt );
+	if ( !(mnPushCount % TRANSACTION_CHUNC) )
+	{
+		ERRORCHECK( sqlite3_exec( mpDb, "begin transaction", nullptr, nullptr, nullptr ) );
+	}
+	//auto nRes =  sqlite3_bind_int( mpStmt, 1, info.tileNum.nX);
+	ERRORCHECK( sqlite3_bind_int( mpStmt, 1, info.tileNum.nX) );
+	ERRORCHECK( sqlite3_bind_int( mpStmt, 2, info.tileNum.nY) );
+	ERRORCHECK( sqlite3_bind_int( mpStmt, 3, info.tileNum.nZ) );
+	ERRORCHECK( sqlite3_bind_int64( mpStmt, 4, info.pixCoord.nU) );
+	ERRORCHECK( sqlite3_bind_int64( mpStmt, 5, info.pixCoord.nV) );
+	ERRORCHECK( sqlite3_bind_int( mpStmt, 6, info.pixValues.nR) );
+	ERRORCHECK( sqlite3_bind_int( mpStmt, 7, info.pixValues.nG) );
+	ERRORCHECK( sqlite3_bind_int( mpStmt, 8, info.pixValues.nG) );
+	ERRORCHECK( sqlite3_bind_int( mpStmt, 9, info.pixValues.nA) );
 
-	if ( sqlite3_step( pStmt) != SQLITE_DONE ) goto ERROR;
+	if ( sqlite3_step( mpStmt) != SQLITE_DONE ) goto ERROR;
+
+	mnPushCount++;
+
+	if ( mnPushCount >= TRANSACTION_CHUNC )
+	{
+		ERRORCHECK( sqlite3_exec( mpDb, "commit", nullptr, nullptr, nullptr ) );
+		mnPushCount = 0;
+	}
+
 	return true;
 
 ERROR:
 	mstrErrorMsg = sqlite3_errstr( sqlite3_errcode(mpDb) );
+	sqlite3_finalize( mpStmt );
 	return false;
 }
+
+
+#if 0
+bool WebTileManager::pushPixelInfo( const TILE_PIXEL_INFO& info )
+{
+	outData data;
+	data.info = info;
+
+	mstmOutputBaseTile.write( data.szData, 256 );
+
+	return true;
+}
+#endif
 
 
 bool WebTileManager::createTilesFromDB()
@@ -85,7 +139,7 @@ bool WebTileManager::createTilesFromDB()
 	std::filesystem::path pathDB = sqlite3_db_filename( mpDb, NULL );
 
 	ERRORCHECK( sqlite3_prepare_v2( mpDb, "select distinct tile_x, tile_y, tile_z from plist;", -1, &pStmt, nullptr ) );
-	while ( sqlite3_step( pStmt ) )
+	while ( sqlite3_step( pStmt ) != SQLITE_DONE )
 	{
 		TILE_COORD tile;
 		tile.nX = sqlite3_column_int( pStmt, 0 );
@@ -132,14 +186,22 @@ bool WebTileManager::createTilesFromDB()
 	CPLFree( pImgB );
 	CPLFree( pImgA );
 	sqlite3_finalize( pStmt );
-	sqlite3_close_v2( mpDb );
-	std::filesystem::remove( pathDB );
 	return true;
 
 ERROR:
 	mstrErrorMsg = sqlite3_errstr( sqlite3_errcode(mpDb) );
 	return false;
 }
+
+
+#if 0
+bool WebTileManager::createTilesFromFile()
+{
+	std::ostream ofs();
+
+	return 0;
+}
+#endif
 
 
 std::vector<TILE_COORD>&& WebTileManager::getOverviewTileList( std::vector<TILE_COORD>& vTileList )

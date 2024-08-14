@@ -2,6 +2,10 @@
 //
 
 #include "plateau-mb-terrain-converter.h"
+#include "WTMCalculator.h"
+#include "CityGMLManager.h"
+#include "WebTileManager.h"
+
 
 #include <gdal_priv.h>
 
@@ -20,7 +24,18 @@ PlateauMapboxTerrainConverter::PlateauMapboxTerrainConverter(
 {
     mpCityGMLManager = std::make_unique<CityGMLManager>( strInputTerrainCityGML );
     auto pInputSpatialRef = mpCityGMLManager->getSpatialRef();
-    mpWTMCalculator = std::make_unique<WTMCalculator>( pInputSpatialRef->GetEPSGGeogCS(), TILE_PIXELS, mnMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
+    if ( pInputSpatialRef )
+    {
+//        mpWTMCalculator = std::make_unique<WTMCalculator>( pInputSpatialRef->GetEPSGGeogCS(), TILE_PIXELS, mnMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
+        mpWTMCalculator = std::make_unique<WTMCalculator>( pInputSpatialRef, TILE_PIXELS, mnMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
+    }
+    else
+    {
+        OGRSpatialReference oSrs;
+        oSrs.importFromEPSG( 4612 );
+        oSrs.SetAxisMappingStrategy( OAMS_TRADITIONAL_GIS_ORDER );
+        mpWTMCalculator = std::make_unique<WTMCalculator>( &oSrs, TILE_PIXELS, mnMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
+    }
     mpWebTileManager = std::make_unique<WebTileManager>( strOutputTileDirectory, nMinZoomLevel, nMaxZoomLevel );
 }
 
@@ -42,5 +57,6 @@ void PlateauMapboxTerrainConverter::createTileset()
             mpWebTileManager->pushPixelInfo( pix );
         }
     }
+    mpWebTileManager->createTilesFromDB();
 }
 

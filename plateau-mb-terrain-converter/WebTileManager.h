@@ -3,9 +3,13 @@
 
 #include "CommonStruct.h"
 
-#include <sqlite3.h>
 #include <string>
 #include <filesystem>
+#include <fstream>
+
+//#if 0
+#include <sqlite3.h>
+//#endif
 
 
 class WebTileManager
@@ -22,6 +26,9 @@ public:
 
 	bool pushPixelInfo( const TILE_PIXEL_INFO &info );
 	bool createTilesFromDB();
+#if 0
+	bool createTilesFromFile();
+#endif
 
 private:
 	bool writePng( const std::string strFName, uint8_t *pImgR, uint8_t *pImgG, uint8_t *pImgB, uint8_t *pImgA );
@@ -40,8 +47,15 @@ private:
 	int mnMinZoomLevel;
 	int mnMaxZoomLevel;
 
+	int mnPushCount;
 	sqlite3 *mpDb;
-	std::filesystem::path mpathOutputDirectory;
+	sqlite3_stmt *mpStmt;
 	std::string mstrErrorMsg;
+	std::filesystem::path mpathOutputDirectory;
+
+#if 0
+	std::fstream mstmInputBaseTile;
+	std::fstream mstmOutputBaseTile;
+#endif
 };
 

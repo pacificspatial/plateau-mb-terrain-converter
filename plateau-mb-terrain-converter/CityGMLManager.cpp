@@ -8,7 +8,11 @@
 CityGMLManager::CityGMLManager( const std::string& strFName )
 	:
 	mbValid( false ),
-	mpCurrentLayer( nullptr )
+	mpCurrentLayer( nullptr ),
+	mdFilterLonMin( -1.0 ),
+	mdFilterLonMax( -1.0 ),
+	mdFilterLatMin( -1.0 ),
+	mdFilterLatMax( -1.0 )
 {
 	GDALAllRegister();
 	char **papszAllowedDrivers = nullptr;
@@ -28,7 +32,20 @@ CityGMLManager::CityGMLManager( const std::string& strFName )
 		OGRLayer *pLayer = mpDS->GetLayer( i );
 		if ( pLayer->GetGeomType() == wkbTINZ )
 		{
-			mvTerrainLayersNum.push_back( i );
+			if ( pLayer->GetFeatureCount() > 0 )
+			{
+				mvTerrainLayersNum.push_back( i );
+				if ( i == 0 )
+				{
+					pLayer->GetExtent( &mEnvelop );
+				}
+				else
+				{
+					OGREnvelope envelop;
+					pLayer->GetExtent( &envelop );
+					mEnvelop.Merge( envelop );
+				}
+			}
 			pLayer->GetFeature( 0 );
 		}
 	}
@@ -41,13 +58,16 @@ CityGMLManager::CityGMLManager( const std::string& strFName )
 		return;
 	}
 
-	mnCurrentLayer = mvTerrainLayersNum.front();
-
 	mnCurrentLayer = 0;
-	mpCurrentLayer = mpDS->GetLayer( mnCurrentLayer );
-
+	mpCurrentLayer = mpDS->GetLayer( mvTerrainLayersNum.at( mnCurrentLayer ) );
+	mpCurrentLayer->ResetReading();
 	mnCurrentFeature = 0;
-	mpCurrentFeature = mpCurrentLayer->GetFeature( mnCurrentFeature );
+	mpCurrentFeature = mpCurrentLayer->GetNextFeature();
+	if ( !mpCurrentFeature )
+	{
+		mstrErrorMsg = "cannot read featurs.";
+		return;
+	}
 
 	mnCurrentTriangle = 0;
 	auto geom = mpCurrentFeature->GetGeometryRef();
@@ -59,15 +79,46 @@ CityGMLManager::CityGMLManager( const std::string& strFName )
 
 CityGMLManager::~CityGMLManager()
 {
+	if ( mpCurrentFeature )
+	{
+		OGRFeature::DestroyFeature( mpCurrentFeature );
+	}
+}
 
+
+void CityGMLManager::reset()
+{
+	mnCurrentLayer = 0;
+	mpCurrentLayer->ResetReading();
+	mnCurrentFeature = 0;
+	mpCurrentFeature = mpCurrentLayer->GetNextFeature();
+	mnCurrentTriangle = 0;
+	auto geom = mpCurrentFeature->GetGeometryRef();
+	mpCurrentGeom = geom->toTriangulatedSurface();
 }
 
 
 const OGRSpatialReference* CityGMLManager::getSpatialRef() const
 {
-	if ( mbValid ) return nullptr;
+	if ( !mbValid ) return nullptr;
 
 	return mpDS->GetSpatialRef();
+}
+
+
+const OGREnvelope& CityGMLManager::getExtent() const
+{
+	return mEnvelop;
+}
+
+
+void CityGMLManager::setSpatialFilter( const double dLonMin, const double dLonMax, const double dLatMin, const double dLatMax )
+{
+	mdFilterLonMin = dLonMin;
+	mdFilterLonMax = dLonMax;
+	mdFilterLatMin = dLatMin;
+	mdFilterLatMax = dLatMax;
+	mpCurrentLayer->SetSpatialFilterRect( mdFilterLonMin, mdFilterLatMin, mdFilterLonMax, mdFilterLatMax );
 }
 
 
@@ -83,16 +134,19 @@ bool CityGMLManager::getNextTriangle( OGRPoint& p1, OGRPoint& p2, OGRPoint& p3 )
 		mnCurrentFeature++;
 		if ( mnCurrentFeature >= mpCurrentLayer->GetFeatureCount() )
 		{
-			mvTerrainLayersNum.pop_front();
-			mnCurrentLayer = mvTerrainLayersNum.front();
-			if ( mnCurrentLayer >= mpDS->GetLayerCount() )
+			mnCurrentLayer++;
+			if ( mnCurrentLayer >= mvTerrainLayersNum.size() )
 			{
+				reset();
 				return false;
 			}
-			mpCurrentLayer = mpDS->GetLayer( mnCurrentLayer );
+			mpCurrentLayer = mpDS->GetLayer( mvTerrainLayersNum.at( mnCurrentLayer ) );
+			mpCurrentLayer->SetSpatialFilterRect( mdFilterLonMin, mdFilterLatMin, mdFilterLonMax, mdFilterLatMax );
 			mnCurrentFeature = 0;
 		}
-		mpCurrentFeature = mpCurrentLayer->GetFeature( mnCurrentFeature );
+		//mpCurrentFeature = mpCurrentLayer->GetFeature( mnCurrentFeature );
+		OGRFeature::DestroyFeature( mpCurrentFeature );
+		mpCurrentFeature = mpCurrentLayer->GetNextFeature();
 		auto geom = mpCurrentFeature->GetGeometryRef();
 		mpCurrentGeom = geom->toTriangulatedSurface();
 		mnCurrentTriangle = 0;
