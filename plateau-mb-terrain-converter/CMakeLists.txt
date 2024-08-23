@@ -16,12 +16,12 @@ CommonStruct.h
 
 add_library (plateau-mb-terrain-converter SHARED ${lib_SRC} ${lib_HEADERS})
 
-# find_package(PNG REQUIRED)
-# if (NOT PNG_FOUND)
-#   message(PNG_LIBRARIES=${PNG_LIBRARIES})
-#   message(PNG_INCLUDE_DIRS=${PNG_INCLUDE_DIRS})
-#   message(SEND_ERROR "libpng was not found.")
-# endif()
+find_package(PNG REQUIRED)
+if (NOT PNG_FOUND)
+  message(PNG_LIBRARIES=${PNG_LIBRARIES})
+  message(PNG_INCLUDE_DIRS=${PNG_INCLUDE_DIRS})
+  message(SEND_ERROR "libpng was not found.")
+endif()
 
 find_package(SQLite REQUIRED)
 if (NOT SQLite3_FOUND)
@@ -34,10 +34,10 @@ if (NOT GDAL_FOUND)
 endif()
 
 target_compile_features(plateau-mb-terrain-converter PRIVATE cxx_std_17)
-target_include_directories(plateau-mb-terrain-converter PRIVATE ${GDAL_INCLUDE_DIR} ${SQLite3_INCLUDE_DIRS})
+target_include_directories(plateau-mb-terrain-converter PRIVATE ${GDAL_INCLUDE_DIR} ${SQLite3_INCLUDE_DIRS} ${PNG_INCLUDE_DIR})
 target_include_directories(plateau-mb-terrain-converter PUBLIC "${plateau-mb-terrain-converter_SOURCE_DIR}/plateau-mb-terrain-converter")
 message(WARNING ${plateau-mb-terrain-converter_SOURCE_DIR}/plateau-mb-terrain-converter)
-target_link_libraries(plateau-mb-terrain-converter ${GDAL_LIBRARY} ${SQLite3_LIBRARIES})
+target_link_libraries(plateau-mb-terrain-converter ${GDAL_LIBRARY} ${SQLite3_LIBRARIES} ${PNG_LIBRARY})
 
 if(BUILD_SHARED_LIBS)
   if(MSVC)

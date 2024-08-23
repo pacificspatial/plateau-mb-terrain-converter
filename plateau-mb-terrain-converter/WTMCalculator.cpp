@@ -6,10 +6,10 @@
 #include <iostream>
 
 
-#define WTM_MIN_X -20037508.34
-#define WTM_MAX_Y 20037471.21
-#define WTM_WIDTH 40075016.68
-#define WTM_HEIGHT 40074942.42
+#define WTM_MIN_X -20037508.342789244
+#define WTM_MAX_Y 20037508.342789244
+#define WTM_WIDTH 40075016.685578488
+#define WTM_HEIGHT 40075016.685578488
 
 #define ULONGLONG unsigned long long
 
@@ -62,7 +62,7 @@ WTM_BBOX WTMCalculator::calcTriangleToWTMBbox( OGRPoint &p1, OGRPoint &p2, OGRPo
 
 OGRPoint WTMCalculator::calcWTMResolution( uint32_t nZoomLevel, uint32_t nPixels )
 {
-	uint64_t nDiv = 2 << nZoomLevel;
+	uint64_t nDiv = 1 << nZoomLevel;
 
 	return {WTM_WIDTH / (nDiv*nPixels), WTM_HEIGHT / (nDiv*nPixels)};
 }
@@ -157,10 +157,10 @@ PIXEL_INFO WTMCalculator::calcPix( double dZ )
 		else
 		{
 			dVal = (dZ + 10000) / 0.1;
-			info.nR = static_cast<uint8_t>( std::floor( dVal / (2<<16) ) );
-			dVal = std::fmod( dVal, 2<<16 );
-			info.nG = static_cast<uint8_t>( std::floor( dVal / (2<<8) ) );
-			info.nB = static_cast<uint8_t>( std::fmod( dVal, 2<<8 ) );
+			info.nR = static_cast<uint8_t>( std::floor( dVal / (1<<16) ) );
+			dVal = std::fmod( dVal, 1<<16 );
+			info.nG = static_cast<uint8_t>( std::floor( dVal / (1<<8) ) );
+			info.nB = static_cast<uint8_t>( std::fmod( dVal, 1<<8 ) );
 			info.nA = 255;
 		}
 	}
@@ -180,11 +180,11 @@ PIXEL_INFO WTMCalculator::calcPix( double dZ )
 		else
 		{
 			dVal = dZ * 100;
-			if ( dVal > 2<<23 ) dVal -= 2<<24;
-			info.nR = static_cast<uint8_t>( std::floor( dVal / (2<<16) ) );
-			dVal = std::fmod( dVal, 2<<16);
-			info.nG = static_cast<uint8_t>( std::floor( dVal / (2<<8) ) );
-			info.nB = static_cast<uint8_t>( std::fmod( dVal, 2<<8 ) );
+			if ( dVal > 1<<23 ) dVal -= 1<<24;
+			info.nR = static_cast<uint8_t>( std::floor( dVal / (1<<16) ) );
+			dVal = std::fmod( dVal, 1<<16);
+			info.nG = static_cast<uint8_t>( std::floor( dVal / (1<<8) ) );
+			info.nB = static_cast<uint8_t>( std::fmod( dVal, 1<<8 ) );
 		}
 	}
 
@@ -204,6 +204,8 @@ std::vector<TILE_PIXEL_INFO> WTMCalculator::getGridInTriangle( OGRPoint p1, OGRP
 
 	auto pixcoord_bbox_tl = calcTotalPixelCoord( {bbox.tl.getX(), bbox.tl.getY()} );
 	auto pixcoord_bbox_br = calcTotalPixelCoord( {bbox.br.getX(), bbox.br.getY()} );
+	pixcoord_bbox_br.nU += 1;
+	pixcoord_bbox_br.nV += 1;
 
 	//std::cout << pixcoord_bbox_tl.nU <<  " | " << pixcoord_bbox_tl.nV << std::endl;
 	//std::cout << pixcoord_bbox_br.nU <<  " | " << pixcoord_bbox_br.nV << std::endl;
@@ -213,13 +215,13 @@ std::vector<TILE_PIXEL_INFO> WTMCalculator::getGridInTriangle( OGRPoint p1, OGRP
 
 	double dSX, dSY;
 	uint64_t v = pixcoord_bbox_tl.nV;
-	while ( v < pixcoord_bbox_br.nV )
+	while ( v <= pixcoord_bbox_br.nV )
 	{
-		dSY = WTM_MAX_Y - v * mWTMResolution.getY();
+		dSY = WTM_MAX_Y - v * mWTMResolution.getY() + 1;
 		uint64_t u = pixcoord_bbox_tl.nU;
 		while ( u < pixcoord_bbox_br.nU )
 		{
-			dSX = WTM_MIN_X + u * mWTMResolution.getX();
+			dSX = WTM_MIN_X + u * mWTMResolution.getX() + 1;
 			f1 = clcw( {dSX, dSY}, p1, p2 );
 			f2 = clcw( {dSX, dSY}, p2, p3 );
 			f3 = clcw( {dSX, dSY}, p3, p1 );

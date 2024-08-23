@@ -1,6 +1,9 @@
 
 #include "WebTIleManager.h"
 
+#include <cpl_string.h>
+#include <png.h>
+
 #include <vector>
 #include <filesystem>
 #include <algorithm>
@@ -42,6 +45,13 @@ WebTileManager::WebTileManager(
 	{
 		return;
 	}
+	
+	std::filesystem::path pathDB = mpathOutputDirectory;
+	pathDB /= "tempdb.sqlite";
+	if ( std::filesystem::exists( pathDB ) )
+	{
+		std::filesystem::remove( pathDB );
+	}
 
 #if 0
 	std::filesystem::path pathBaseOutput = mpathOutputDirectory;
@@ -49,8 +59,6 @@ WebTileManager::WebTileManager(
 	mstmOutputBaseTile.open( pathBaseOutput, std::ios::binary );
 #endif
 
-	std::filesystem::path pathDB = mpathOutputDirectory;
-	pathDB /= "tempdb.sqlite";
 	ERRORCHECK( sqlite3_open_v2( pathDB.u8string().c_str(), &mpDb,
 		 SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr ) );
 
@@ -97,7 +105,7 @@ bool WebTileManager::pushPixelInfo( const TILE_PIXEL_INFO& info )
 	ERRORCHECK( sqlite3_bind_int64( mpStmt, 5, info.pixCoord.nV) );
 	ERRORCHECK( sqlite3_bind_int( mpStmt, 6, info.pixValues.nR) );
 	ERRORCHECK( sqlite3_bind_int( mpStmt, 7, info.pixValues.nG) );
-	ERRORCHECK( sqlite3_bind_int( mpStmt, 8, info.pixValues.nG) );
+	ERRORCHECK( sqlite3_bind_int( mpStmt, 8, info.pixValues.nB) );
 	ERRORCHECK( sqlite3_bind_int( mpStmt, 9, info.pixValues.nA) );
 
 	if ( sqlite3_step( mpStmt) != SQLITE_DONE ) goto ERROR;
@@ -129,9 +137,55 @@ bool WebTileManager::pushPixelInfo( const TILE_PIXEL_INFO& info )
 
 	return true;
 }
+
+
+bool WebTileManager::writePng( const std::string strFName, uint8_t *pImgR, uint8_t *pImgG, uint8_t *pImgB, uint8_t *pImgA )
+{
+	auto poDriver = GetGDALDriverManager()->GetDriverByName( "PNG" );
+	if ( !poDriver )
+	{
+		mstrErrorMsg = "GDAL Driver PNG was not found.";
+		return false;
+	}
+
+	CPLStringList aosOptions;
+	aosOptions.AddString( "WORLDFILE=NO" );
+	aosOptions.AddString( "WRITE_METADATA_AS_TEXT=NO" );
+
+
+	auto poDS = poDriver->Create( strFName.c_str(), TILE_PIXELS, TILE_PIXELS, 4, GDT_Byte, aosOptions.List() );
+	auto poBandR = poDS->GetRasterBand( 1 );
+	auto poBandG = poDS->GetRasterBand( 2 );
+	auto poBandB = poDS->GetRasterBand( 3 );
+	auto poBandA = poDS->GetRasterBand( 4 );
+
+	poBandR->RasterIO( GF_Write, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgR, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+	poBandG->RasterIO( GF_Write, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgG, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+	poBandB->RasterIO( GF_Write, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgB, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+	poBandA->RasterIO( GF_Write, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgA, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
+
+	GDALClose( poDS );
+
+	return true;
+}
 #endif
 
 
+bool WebTileManager::writePng(  const std::string strFName, uint8_t *pImg )
+{
+	png_image png;
+
+	std::memset( &png, 0x00, sizeof(png_image) );
+	png.version = PNG_IMAGE_VERSION;
+	png.width = TILE_PIXELS;
+	png.height = TILE_PIXELS;
+	png.format = PNG_FORMAT_RGBA;
+
+	return png_image_write_to_file( &png, strFName.c_str(), 0, pImg, PNG_IMAGE_ROW_STRIDE(png), nullptr ) != 0;
+}
+
+
+#if 0
 bool WebTileManager::createTilesFromDB()
 {
 	std::vector<TILE_COORD> vTiles;
@@ -160,7 +214,7 @@ bool WebTileManager::createTilesFromDB()
 		sqlite3_bind_int( pStmt, 1, t.nX );
 		sqlite3_bind_int( pStmt, 2, t.nY );
 		sqlite3_bind_int( pStmt, 3, t.nZ );
-		while ( sqlite3_step( pStmt ) )
+		while ( sqlite3_step( pStmt ) != SQLITE_DONE )
 		{
 			int nU = sqlite3_column_int( pStmt, 0 );
 			int nV = sqlite3_column_int( pStmt, 1 );
@@ -194,7 +248,6 @@ ERROR:
 }
 
 
-#if 0
 bool WebTileManager::createTilesFromFile()
 {
 	std::ostream ofs();
@@ -202,6 +255,58 @@ bool WebTileManager::createTilesFromFile()
 	return 0;
 }
 #endif
+
+bool WebTileManager::createTilesFromDB()
+{
+	std::vector<TILE_COORD> vTiles;
+	sqlite3_stmt *pStmt;
+	std::filesystem::path pathDB = sqlite3_db_filename( mpDb, NULL );
+
+	ERRORCHECK( sqlite3_prepare_v2( mpDb, "select distinct tile_x, tile_y, tile_z from plist;", -1, &pStmt, nullptr ) );
+	while ( sqlite3_step( pStmt ) != SQLITE_DONE )
+	{
+		TILE_COORD tile;
+		tile.nX = sqlite3_column_int( pStmt, 0 );
+		tile.nY = sqlite3_column_int( pStmt, 1 );
+		tile.nZ = sqlite3_column_int( pStmt, 2 );
+		vTiles.push_back( tile );
+	}
+	sqlite3_finalize( pStmt );
+
+	uint8_t *pImgBuf = static_cast<uint8_t *>( CPLCalloc( TILE_PIXELS*TILE_PIXELS*4, 1 ) );
+
+	ERRORCHECK( sqlite3_prepare_v2( mpDb, "select pixel_u,pixel_v,r,g,b,a from plist where tile_x=?1 and tile_y=?2 and tile_z=?3", -1, &pStmt, nullptr ) );
+	for ( auto &t : vTiles )
+	{
+		sqlite3_bind_int( pStmt, 1, t.nX );
+		sqlite3_bind_int( pStmt, 2, t.nY );
+		sqlite3_bind_int( pStmt, 3, t.nZ );
+		while ( sqlite3_step( pStmt ) != SQLITE_DONE )
+		{
+			int nU = sqlite3_column_int( pStmt, 0 );
+			int nV = sqlite3_column_int( pStmt, 1 );
+			uint8_t bR = static_cast<uint8_t>( sqlite3_column_int( pStmt, 2 ) );
+			uint8_t bG = static_cast<uint8_t>( sqlite3_column_int( pStmt, 3 ) );
+			uint8_t bB = static_cast<uint8_t>( sqlite3_column_int( pStmt, 4 ) );
+			uint8_t bA = static_cast<uint8_t>( sqlite3_column_int( pStmt, 5 ) );
+			pImgBuf[nV*TILE_PIXELS*4 + nU*4 + 0] = bR;
+			pImgBuf[nV*TILE_PIXELS*4 + nU*4 + 1] = bG;
+			pImgBuf[nV*TILE_PIXELS*4 + nU*4 + 2] = bB;
+			pImgBuf[nV*TILE_PIXELS*4 + nU*4 + 3] = bA;
+		}
+		auto strFName = makeOutputFilePath( mpathOutputDirectory, t.nX, t.nY, t.nZ );
+		auto bRes = writePng( strFName, pImgBuf );
+		sqlite3_reset( pStmt );
+		std::memset( pImgBuf, 0x00, TILE_PIXELS*TILE_PIXELS*4 );
+	}
+	CPLFree( pImgBuf );
+	sqlite3_finalize( pStmt );
+	return true;
+
+ERROR:
+	mstrErrorMsg = sqlite3_errstr( sqlite3_errcode(mpDb) );
+	return false;
+}
 
 
 std::vector<TILE_COORD>&& WebTileManager::getOverviewTileList( std::vector<TILE_COORD>& vTileList )
@@ -230,7 +335,7 @@ bool WebTileManager::buildOverviews( std::vector<TILE_COORD> &vBaseTiles )
 	auto&& vTiles = getOverviewTileList( vBaseTiles );
 	int nCurrentZoomLevel = vBaseTiles.front().nZ - 1;
 
-	while ( nCurrentZoomLevel > mnMinZoomLevel )
+	if ( nCurrentZoomLevel > mnMinZoomLevel )
 	{
 		for ( auto& t : vTiles )
 		{
@@ -248,10 +353,12 @@ bool WebTileManager::buildOverviews( std::vector<TILE_COORD> &vBaseTiles )
 				pathOutput, pathBassTileTL, pathBassTileTR, pathBassTileBL, pathBassTileBR );
 		}
 
-		buildOverviews( vTiles );
+		return buildOverviews( vTiles );
 	}
-
-	return true;
+	else
+	{
+		return false;
+	}
 }
 
 
@@ -260,48 +367,23 @@ std::string WebTileManager::makeOutputFilePath( std::filesystem::path pathBase, 
 	std::filesystem::path pathOutput = pathBase;
 
 	pathOutput /= std::to_string( nZ );
-	if ( std::filesystem::exists( pathOutput ) )
+	if ( !std::filesystem::exists( pathOutput ) )
 	{
 		std::filesystem::create_directory( pathOutput );
 	}
 
-	pathOutput /= std::to_string( nY );
-	if ( std::filesystem::exists( pathOutput ) )
+	pathOutput /= std::to_string( nX );
+	if ( !std::filesystem::exists( pathOutput ) )
 	{
 		std::filesystem::create_directory( pathOutput );
 	}
 
-	pathOutput /= std::to_string( nZ ) + ".png";
+	pathOutput /= std::to_string( nY ) + ".png";
 	return pathOutput.u8string();
 }
 
 
-bool WebTileManager::writePng( const std::string strFName, uint8_t *pImgR, uint8_t *pImgG, uint8_t *pImgB, uint8_t *pImgA )
-{
-	auto poDriver = GetGDALDriverManager()->GetDriverByName( "PNG" );
-	if ( !poDriver )
-	{
-		mstrErrorMsg = "GDAL Driver PNG was not found.";
-		return false;
-	}
-
-	auto poDS = poDriver->Create( strFName.c_str(), TILE_PIXELS, TILE_PIXELS, 4, GDT_Byte, nullptr );
-	auto poBandR = poDS->GetRasterBand( 1 );
-	auto poBandG = poDS->GetRasterBand( 2 );
-	auto poBandB = poDS->GetRasterBand( 3 );
-	auto poBandA = poDS->GetRasterBand( 4 );
-
-	poBandR->RasterIO( GF_Write, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgR, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
-	poBandG->RasterIO( GF_Write, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgG, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
-	poBandB->RasterIO( GF_Write, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgB, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
-	poBandA->RasterIO( GF_Write, 0, 0, TILE_PIXELS, TILE_PIXELS, pImgA, TILE_PIXELS, TILE_PIXELS, GDT_Byte, 0, 0 );
-
-	GDALClose( poDS );
-
-	return true;
-}
-
-
+#if 0
 bool WebTileManager::createOverviewTileFromQuadTiles(
 	const std::filesystem::path &pathOutput,
 	const std::filesystem::path& pathTileTL,
@@ -434,4 +516,114 @@ bool WebTileManager::createOverviewTileFromQuadTiles(
 	GDALClose( poOutDS );
 	return true;
 }
+#endif
 
+bool WebTileManager::readPng( const std::string strFName, uint8_t** pImg )
+{
+	png_image png;
+	std::memset( &png, 0x00, sizeof(png_image ) );
+
+	png_image_begin_read_from_file( &png, strFName.c_str() );
+	if ( PNG_IMAGE_FAILED( png ) )
+	{
+		return false;
+	}
+
+	uint32_t nStride = PNG_IMAGE_ROW_STRIDE( png );
+	*pImg = static_cast<uint8_t *>( std::malloc( PNG_IMAGE_BUFFER_SIZE( png, nStride ) ) );
+
+	png_image_finish_read( &png, nullptr, *pImg, nStride, nullptr );
+
+	return true;
+}
+
+bool WebTileManager::createOverviewTileFromQuadTiles(
+	const std::filesystem::path &pathOutput,
+	const std::filesystem::path& pathTileTL,
+	const std::filesystem::path& pathTileTR,
+	const std::filesystem::path& pathTileBL,
+	const std::filesystem::path& pathTileBR )
+{
+	png_image pngOut;
+	uint8_t *pImgIn;
+	uint8_t *pImgOut = static_cast<uint8_t *>( std::malloc( TILE_PIXELS*TILE_PIXELS*4 ) );
+	if ( !pImgOut )
+	{
+		return false;
+	}
+
+	std::memset( pImgOut, 0x00, TILE_PIXELS*TILE_PIXELS*4 );
+
+	if ( std::filesystem::exists( pathTileTL ) )
+	{
+		readPng( pathTileTL.u8string().c_str(), &pImgIn );
+		for ( int i = 0; i < TILE_PIXELS; i += 2 )
+		{
+			for ( int j = 0; j < TILE_PIXELS; j += 2 )
+			{
+				int nOutIndex = (i/2)*TILE_PIXELS*4 + (j/2)*4;
+				pImgOut[nOutIndex + 0] = pImgIn[i*TILE_PIXELS*4 + j*4 + 0];
+				pImgOut[nOutIndex + 1] = pImgIn[i*TILE_PIXELS*4 + j*4 + 1];
+				pImgOut[nOutIndex + 2] = pImgIn[i*TILE_PIXELS*4 + j*4 + 2];
+				pImgOut[nOutIndex + 3] = pImgIn[i*TILE_PIXELS*4 + j*4 + 3];
+			}
+		}
+		std::free( pImgIn );
+	}
+
+	if ( std::filesystem::exists( pathTileTR ) )
+	{
+		readPng( pathTileTR.u8string().c_str(), &pImgIn );
+		for ( int i = 0; i < TILE_PIXELS; i += 2 )
+		{
+			for ( int j = 0; j < TILE_PIXELS; j += 2 )
+			{
+				int nOutIndex = (i/2)*TILE_PIXELS*4 + (TILE_PIXELS/2 + j/2)*4;
+				pImgOut[nOutIndex + 0] = pImgIn[i*TILE_PIXELS*4 + j*4 + 0];
+				pImgOut[nOutIndex + 1] = pImgIn[i*TILE_PIXELS*4 + j*4 + 1];
+				pImgOut[nOutIndex + 2] = pImgIn[i*TILE_PIXELS*4 + j*4 + 2];
+				pImgOut[nOutIndex + 3] = pImgIn[i*TILE_PIXELS*4 + j*4 + 3];
+			}
+		}
+		std::free( pImgIn );
+	}
+
+	if ( std::filesystem::exists( pathTileBL ) )
+	{
+		readPng( pathTileBL.u8string().c_str(), &pImgIn );
+		for ( int i = 0; i < TILE_PIXELS; i++ )
+		{
+			for ( int j = 0; j < TILE_PIXELS; j++ )
+			{
+				int nOutIndex = (TILE_PIXELS/2 + i/2)*TILE_PIXELS*4 + (j/2)*4;
+				pImgOut[nOutIndex + 0] = pImgIn[i*TILE_PIXELS*4 + j*4 + 0];
+				pImgOut[nOutIndex + 1] = pImgIn[i*TILE_PIXELS*4 + j*4 + 1];
+				pImgOut[nOutIndex + 2] = pImgIn[i*TILE_PIXELS*4 + j*4 + 2];
+				pImgOut[nOutIndex + 3] = pImgIn[i*TILE_PIXELS*4 + j*4 + 3];
+			}
+		}
+		std::free( pImgIn );
+	}
+
+	if ( std::filesystem::exists( pathTileBR ) )
+	{
+		readPng( pathTileBR.u8string().c_str(), &pImgIn );
+		for ( int i = 0; i < TILE_PIXELS; i++ )
+		{
+			for ( int j = 0; j < TILE_PIXELS; j++ )
+			{
+				int nOutIndex = (TILE_PIXELS/2 + i/2)*TILE_PIXELS*4 + (TILE_PIXELS/2 + j/2)*4;
+				pImgOut[nOutIndex + 0] = pImgIn[i*TILE_PIXELS*4 + j*4 + 0];
+				pImgOut[nOutIndex + 1] = pImgIn[i*TILE_PIXELS*4 + j*4 + 1];
+				pImgOut[nOutIndex + 2] = pImgIn[i*TILE_PIXELS*4 + j*4 + 2];
+				pImgOut[nOutIndex + 3] = pImgIn[i*TILE_PIXELS*4 + j*4 + 3];
+			}
+		}
+		std::free( pImgIn );
+	}
+
+	bool bRes = writePng( pathOutput.u8string(), pImgOut );
+	std::free( pImgOut );
+
+	return bRes;
+}

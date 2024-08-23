@@ -31,7 +31,11 @@ public:
 #endif
 
 private:
+#if 0
 	bool writePng( const std::string strFName, uint8_t *pImgR, uint8_t *pImgG, uint8_t *pImgB, uint8_t *pImgA );
+#endif
+	bool writePng( const std::string strFName, uint8_t *pImg );
+	bool readPng( const std::string strFName, uint8_t **pImg );
 	std::string makeOutputFilePath( std::filesystem::path pathBase, const int nX, const int nY, const int nZ );
 	bool buildOverviews( std::vector<TILE_COORD> &vBaseTiles );
 	bool createOverviewTileFromQuadTiles( 
