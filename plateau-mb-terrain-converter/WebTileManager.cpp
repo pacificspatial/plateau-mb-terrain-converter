@@ -7,6 +7,7 @@
 #include <vector>
 #include <filesystem>
 #include <algorithm>
+#include <iostream>
 
 
 #define ERRORCHECK(f) \
@@ -301,6 +302,9 @@ bool WebTileManager::createTilesFromDB()
 	}
 	CPLFree( pImgBuf );
 	sqlite3_finalize( pStmt );
+
+	buildOverviews( vTiles );
+
 	return true;
 
 ERROR:
@@ -309,7 +313,7 @@ ERROR:
 }
 
 
-std::vector<TILE_COORD>&& WebTileManager::getOverviewTileList( std::vector<TILE_COORD>& vTileList )
+std::vector<TILE_COORD> WebTileManager::getOverviewTileList( std::vector<TILE_COORD>& vTileList )
 {
 	std::vector<TILE_COORD> vOverviewTiles;
 
@@ -322,17 +326,37 @@ std::vector<TILE_COORD>&& WebTileManager::getOverviewTileList( std::vector<TILE_
 		vOverviewTiles.push_back( sOverviewTile );
 	}
 
-	std::sort( vOverviewTiles.begin(), vOverviewTiles.end() );
-	auto pEnd = std::unique( vOverviewTiles.begin(), vOverviewTiles.end() );
+	std::sort( vOverviewTiles.begin(), vOverviewTiles.end(),
+			   []( TILE_COORD &a, TILE_COORD &b )
+			   {
+				   return a.nY == b.nY ? a.nX < b.nX : a.nY < b.nY;
+			   }
+	);
+
+
+#ifdef _DEBUG
+	for ( auto &t : vOverviewTiles )
+	{
+		printf( "x : %7d, y : %7d, z : %7d\n", 
+				t.nX, t.nY, t.nZ );
+	}
+#endif
+
+	auto pEnd = std::unique( vOverviewTiles.begin(), vOverviewTiles.end(),
+							 []( TILE_COORD &a, TILE_COORD &b )
+							 {
+								 return a.nX == b.nX && a.nY == b.nY && a.nZ == b.nZ;
+							 }
+	);
 	vOverviewTiles.erase( pEnd, vOverviewTiles.end() );
 
-	return std::move( vOverviewTiles );
+	return vOverviewTiles;
 }
 
 
 bool WebTileManager::buildOverviews( std::vector<TILE_COORD> &vBaseTiles )
 {
-	auto&& vTiles = getOverviewTileList( vBaseTiles );
+	auto vTiles = getOverviewTileList( vBaseTiles );
 	int nCurrentZoomLevel = vBaseTiles.front().nZ - 1;
 
 	if ( nCurrentZoomLevel > mnMinZoomLevel )
@@ -340,13 +364,13 @@ bool WebTileManager::buildOverviews( std::vector<TILE_COORD> &vBaseTiles )
 		for ( auto& t : vTiles )
 		{
 			std::filesystem::path pathBassTileTL = 
-				makeOutputFilePath( mpathOutputDirectory, t.nX << 1, t.nY << 1, t.nZ );
+				makeOutputFilePath( mpathOutputDirectory, t.nX << 1, t.nY << 1, t.nZ+1 );
 			std::filesystem::path pathBassTileTR = 
-				makeOutputFilePath( mpathOutputDirectory, t.nX << (1 + 1), t.nY << 1, t.nZ );
+				makeOutputFilePath( mpathOutputDirectory, (t.nX << 1) + 1, t.nY << 1, t.nZ+1 );
 			std::filesystem::path pathBassTileBL = 
-				makeOutputFilePath( mpathOutputDirectory, t.nX << 1, t.nY << (1 + 1), t.nZ );
+				makeOutputFilePath( mpathOutputDirectory, t.nX << 1, (t.nY << 1) + 1, t.nZ+1 );
 			std::filesystem::path pathBassTileBR = 
-				makeOutputFilePath( mpathOutputDirectory, t.nX << (1 + 1), t.nY << (1 + 1), t.nZ );
+				makeOutputFilePath( mpathOutputDirectory, (t.nX << 1) + 1, (t.nY << 1) + 1, t.nZ+1 );
 			std::filesystem::path pathOutput = 
 				makeOutputFilePath( mpathOutputDirectory, t.nX, t.nY, t.nZ );
 			createOverviewTileFromQuadTiles(
@@ -522,10 +546,12 @@ bool WebTileManager::readPng( const std::string strFName, uint8_t** pImg )
 {
 	png_image png;
 	std::memset( &png, 0x00, sizeof(png_image ) );
+	png.version = PNG_IMAGE_VERSION;
 
 	png_image_begin_read_from_file( &png, strFName.c_str() );
 	if ( PNG_IMAGE_FAILED( png ) )
 	{
+		std::cout << png.message << std::endl;
 		return false;
 	}
 
@@ -545,13 +571,14 @@ bool WebTileManager::createOverviewTileFromQuadTiles(
 	const std::filesystem::path& pathTileBR )
 {
 	png_image pngOut;
-	uint8_t *pImgIn;
+	uint8_t *pImgIn = static_cast<uint8_t *>( std::malloc( TILE_PIXELS*TILE_PIXELS*4 ) );
 	uint8_t *pImgOut = static_cast<uint8_t *>( std::malloc( TILE_PIXELS*TILE_PIXELS*4 ) );
 	if ( !pImgOut )
 	{
 		return false;
 	}
 
+	std::memset( pImgIn, 0x00, TILE_PIXELS*TILE_PIXELS*4 );
 	std::memset( pImgOut, 0x00, TILE_PIXELS*TILE_PIXELS*4 );
 
 	if ( std::filesystem::exists( pathTileTL ) )
@@ -561,7 +588,7 @@ bool WebTileManager::createOverviewTileFromQuadTiles(
 		{
 			for ( int j = 0; j < TILE_PIXELS; j += 2 )
 			{
-				int nOutIndex = (i/2)*TILE_PIXELS*4 + (j/2)*4;
+				int nOutIndex = (i>>1)*TILE_PIXELS*4 + (j>>1)*4;
 				pImgOut[nOutIndex + 0] = pImgIn[i*TILE_PIXELS*4 + j*4 + 0];
 				pImgOut[nOutIndex + 1] = pImgIn[i*TILE_PIXELS*4 + j*4 + 1];
 				pImgOut[nOutIndex + 2] = pImgIn[i*TILE_PIXELS*4 + j*4 + 2];
@@ -578,7 +605,7 @@ bool WebTileManager::createOverviewTileFromQuadTiles(
 		{
 			for ( int j = 0; j < TILE_PIXELS; j += 2 )
 			{
-				int nOutIndex = (i/2)*TILE_PIXELS*4 + (TILE_PIXELS/2 + j/2)*4;
+				int nOutIndex = (i>>1)*TILE_PIXELS*4 + ((TILE_PIXELS>>1) + (j>>1))*4;
 				pImgOut[nOutIndex + 0] = pImgIn[i*TILE_PIXELS*4 + j*4 + 0];
 				pImgOut[nOutIndex + 1] = pImgIn[i*TILE_PIXELS*4 + j*4 + 1];
 				pImgOut[nOutIndex + 2] = pImgIn[i*TILE_PIXELS*4 + j*4 + 2];
@@ -595,7 +622,7 @@ bool WebTileManager::createOverviewTileFromQuadTiles(
 		{
 			for ( int j = 0; j < TILE_PIXELS; j++ )
 			{
-				int nOutIndex = (TILE_PIXELS/2 + i/2)*TILE_PIXELS*4 + (j/2)*4;
+				int nOutIndex = ((TILE_PIXELS>>1) + (i>>1))*TILE_PIXELS*4 + (j>>1)*4;
 				pImgOut[nOutIndex + 0] = pImgIn[i*TILE_PIXELS*4 + j*4 + 0];
 				pImgOut[nOutIndex + 1] = pImgIn[i*TILE_PIXELS*4 + j*4 + 1];
 				pImgOut[nOutIndex + 2] = pImgIn[i*TILE_PIXELS*4 + j*4 + 2];
@@ -612,7 +639,7 @@ bool WebTileManager::createOverviewTileFromQuadTiles(
 		{
 			for ( int j = 0; j < TILE_PIXELS; j++ )
 			{
-				int nOutIndex = (TILE_PIXELS/2 + i/2)*TILE_PIXELS*4 + (TILE_PIXELS/2 + j/2)*4;
+				int nOutIndex = ((TILE_PIXELS>>1) + (i>>1))*TILE_PIXELS*4 + ((TILE_PIXELS>>1) + (j>>1))*4;
 				pImgOut[nOutIndex + 0] = pImgIn[i*TILE_PIXELS*4 + j*4 + 0];
 				pImgOut[nOutIndex + 1] = pImgIn[i*TILE_PIXELS*4 + j*4 + 1];
 				pImgOut[nOutIndex + 2] = pImgIn[i*TILE_PIXELS*4 + j*4 + 2];

@@ -28,18 +28,6 @@ using  TILE_COORD = struct _tile_coord
 };
 
 
-inline bool operator<( const TILE_COORD& c1, const TILE_COORD& c2 )
-{
-	return c1.nY == c2.nY ? 
-		c1.nX < c2.nX : c2.nY < c2.nY;
-}
-
-inline bool operator==( const TILE_COORD& c1, const TILE_COORD& c2 )
-{
-	return c1.nX == c2.nX && c1.nY == c2.nY && c1.nZ == c2.nZ;
-}
-
-
 using PIXEL_INFO = struct _pixel_info{
 	uint8_t nR;
 	uint8_t nG;

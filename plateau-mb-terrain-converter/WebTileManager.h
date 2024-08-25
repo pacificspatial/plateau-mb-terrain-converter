@@ -44,7 +44,7 @@ private:
 		const std::filesystem::path &pathTileTR, 
 		const std::filesystem::path &pathTileBL, 
 		const std::filesystem::path &pathTileBR );
-	std::vector<TILE_COORD>&& getOverviewTileList( std::vector<TILE_COORD> &vTileList );
+	std::vector<TILE_COORD> getOverviewTileList( std::vector<TILE_COORD> &vTileList );
 
 	bool mbValid;
 
