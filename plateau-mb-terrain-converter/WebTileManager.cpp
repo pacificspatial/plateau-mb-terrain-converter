@@ -296,6 +296,12 @@ bool WebTileManager::createTilesFromDB()
 			pImgBuf[nV*TILE_PIXELS*4 + nU*4 + 3] = bA;
 		}
 		auto strFName = makeOutputFilePath( mpathOutputDirectory, t.nX, t.nY, t.nZ );
+		if ( !createDirectoryFromTilePath( std::filesystem::path(strFName) ) )
+		{
+			CPLFree( pImgBuf );
+			sqlite3_finalize( pStmt );
+			return false;
+		}
 		auto bRes = writePng( strFName, pImgBuf );
 		sqlite3_reset( pStmt );
 		std::memset( pImgBuf, 0x00, TILE_PIXELS*TILE_PIXELS*4 );
@@ -371,8 +377,18 @@ bool WebTileManager::buildOverviews( std::vector<TILE_COORD> &vBaseTiles )
 				makeOutputFilePath( mpathOutputDirectory, t.nX << 1, (t.nY << 1) + 1, t.nZ+1 );
 			std::filesystem::path pathBassTileBR = 
 				makeOutputFilePath( mpathOutputDirectory, (t.nX << 1) + 1, (t.nY << 1) + 1, t.nZ+1 );
+
+			if ( !std::filesystem::exists(pathBassTileTL) &&
+				 !std::filesystem::exists(pathBassTileTR) &&
+				 !std::filesystem::exists(pathBassTileBL) &&
+				 !std::filesystem::exists(pathBassTileBR) )
+			{
+				continue;
+			}
+
 			std::filesystem::path pathOutput = 
 				makeOutputFilePath( mpathOutputDirectory, t.nX, t.nY, t.nZ );
+			createDirectoryFromTilePath( pathOutput );
 			createOverviewTileFromQuadTiles(
 				pathOutput, pathBassTileTL, pathBassTileTR, pathBassTileBL, pathBassTileBR );
 		}
@@ -386,22 +402,38 @@ bool WebTileManager::buildOverviews( std::vector<TILE_COORD> &vBaseTiles )
 }
 
 
-std::string WebTileManager::makeOutputFilePath( std::filesystem::path pathBase, const int nX, const int nY, const int nZ )
+bool WebTileManager::createDirectoryFromTilePath( const std::filesystem::path pathTileName )
+{
+	std::filesystem::path pathZ = pathTileName.parent_path().parent_path();
+	if ( !std::filesystem::exists( pathZ ) )
+	{
+		if ( !std::filesystem::create_directory( pathZ ) )
+		{
+			std::cerr << "unable to create directory : " << pathZ << std::endl;
+			return false;
+		}
+	}
+
+	std::filesystem::path pathX = pathTileName.parent_path();
+	if ( !std::filesystem::exists( pathX ) )
+	{
+		if ( !std::filesystem::create_directory( pathX ) )
+		{
+			std::cerr << "unable to create directory : " << pathX << std::endl;
+			return false;
+		}
+	}
+
+	return true;
+}
+
+
+std::string WebTileManager::makeOutputFilePath( const std::filesystem::path pathBase, const int nX, const int nY, const int nZ )
 {
 	std::filesystem::path pathOutput = pathBase;
 
 	pathOutput /= std::to_string( nZ );
-	if ( !std::filesystem::exists( pathOutput ) )
-	{
-		std::filesystem::create_directory( pathOutput );
-	}
-
 	pathOutput /= std::to_string( nX );
-	if ( !std::filesystem::exists( pathOutput ) )
-	{
-		std::filesystem::create_directory( pathOutput );
-	}
-
 	pathOutput /= std::to_string( nY ) + ".png";
 	return pathOutput.u8string();
 }

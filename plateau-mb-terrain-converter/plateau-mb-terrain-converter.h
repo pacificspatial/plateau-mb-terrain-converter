@@ -9,17 +9,17 @@
 
 
 #ifndef PMTC_DLL
-//    #if defined(_MSC_VER)
+    #if defined(_MSC_VER)
         #ifdef PMTC_DLL_EXPORT
             #define PMTC_DLL __declspec(dllexport)
         #else
             #define PMTC_DLL __declspec(dllimport)
         #endif
-    //#elif defined(__GNUC__)
-    //    #define PMTC_DLL __attribute__((visibility("default")))
-    //#else
-    //    #define PMTC_DLL
-    //#endif
+    #elif defined(__GNUC__)
+        #define PMTC_DLL __attribute__((visibility("default")))
+    #else
+        #define PMTC_DLL
+    #endif
 #endif
 
 
