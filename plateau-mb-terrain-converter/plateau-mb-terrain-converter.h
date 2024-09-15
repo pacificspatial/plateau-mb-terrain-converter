@@ -6,6 +6,7 @@
 
 #include <string>
 #include <memory>
+#include <functional>
 
 
 #ifndef PMTC_DLL
@@ -36,9 +37,13 @@ public:
         const std::string &strInputTerrainCityGML, 
         const std::string &strOutputTileDirectory, 
         const int nMinZoomLevel, 
-        const int nMaxZoomLevel
+        const int nMaxZoomLevel,
+        const std::function<void(std::string)> &fnMessageFeedback = nullptr,
+        const std::function<void(int)> &fnProgressFeedback = nullptr
     );
     virtual ~PlateauMapboxTerrainConverter();
+
+    inline bool isValid() const { return mbValid; }
 
     void createTileset();
 
@@ -47,9 +52,13 @@ private:
     std::string mstrTileDirectory;
     int mnMinZoomLevel;
     int mnMaxZoomLevel;
+    bool mbValid;
 
     std::unique_ptr<WTMCalculator> mpWTMCalculator;
     std::unique_ptr<CityGMLManager> mpCityGMLManager;
     std::unique_ptr<WebTileManager> mpWebTileManager;
+
+    std::function<void(std::string)> mfnMessageFeedback;
+    std::function<void(int)> mfnProgressFeedback;
 };
 

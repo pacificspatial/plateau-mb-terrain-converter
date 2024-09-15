@@ -6,6 +6,7 @@
 #include <string>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 
 //#if 0
 #include <sqlite3.h>
@@ -18,7 +19,10 @@ public:
 	WebTileManager() = delete;
 	WebTileManager( const std::string &strOutputDirectory,
 					const int nMinZoomLevel,
-					const int nMaxZoomLevel );
+					const int nMaxZoomLevel,
+					const std::function<void(std::string)> &fnMessageFeedback = nullptr,
+					const std::function<void(int)> &fnProgressFeedback = nullptr
+	);
 	virtual ~WebTileManager();
 
 	inline bool isValid() const { return mbValid; }
@@ -57,6 +61,9 @@ private:
 	sqlite3_stmt *mpStmt;
 	std::string mstrErrorMsg;
 	std::filesystem::path mpathOutputDirectory;
+
+	std::function<void(std::string)> mfnMessageFeedback;
+	std::function<void(int)> mfnProgressFeedback;
 
 #if 0
 	std::fstream mstmInputBaseTile;

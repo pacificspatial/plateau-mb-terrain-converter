@@ -14,15 +14,31 @@ PlateauMapboxTerrainConverter::PlateauMapboxTerrainConverter(
     const std::string& strInputTerrainCityGML,
     const std::string& strOutputTileDirectory,
     const int nMinZoomLevel,
-    const int nMaxZoomLevel
+    const int nMaxZoomLevel,
+    const std::function<void(std::string)> &fnMessageFeedback,
+    const std::function<void(int)> &fnProgressFeedback
 )
     : 
     mstrInputTerrainCityGML( strInputTerrainCityGML ),
     mstrTileDirectory( strOutputTileDirectory ),
     mnMinZoomLevel( nMinZoomLevel ),
-    mnMaxZoomLevel( nMaxZoomLevel )
+    mnMaxZoomLevel( nMaxZoomLevel ),
+    mfnMessageFeedback( fnMessageFeedback ),
+    mfnProgressFeedback( fnProgressFeedback ),
+    mbValid( false )
 {
-    mpCityGMLManager = std::make_unique<CityGMLManager>( strInputTerrainCityGML );
+    mpWebTileManager = std::make_unique<WebTileManager>( strOutputTileDirectory, nMinZoomLevel, nMaxZoomLevel, mfnMessageFeedback, mfnProgressFeedback );
+    if ( !mpWebTileManager->isValid() )
+    {
+        return;
+    }
+
+    mpCityGMLManager = std::make_unique<CityGMLManager>( strInputTerrainCityGML, mfnMessageFeedback );
+    if ( !mpCityGMLManager->isValid() )
+    {
+        return;
+    }
+
     auto pInputSpatialRef = mpCityGMLManager->getSpatialRef();
     if ( pInputSpatialRef )
     {
@@ -36,7 +52,8 @@ PlateauMapboxTerrainConverter::PlateauMapboxTerrainConverter(
         oSrs.SetAxisMappingStrategy( OAMS_TRADITIONAL_GIS_ORDER );
         mpWTMCalculator = std::make_unique<WTMCalculator>( &oSrs, TILE_PIXELS, mnMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
     }
-    mpWebTileManager = std::make_unique<WebTileManager>( strOutputTileDirectory, nMinZoomLevel, nMaxZoomLevel );
+
+    mbValid = true;
 }
 
 
@@ -49,12 +66,22 @@ void PlateauMapboxTerrainConverter::createTileset()
 {
     OGRPoint p1, p2, p3;
 
+    if ( mfnMessageFeedback )
+    {
+        mfnMessageFeedback( "calculating grid height in triangles ..." );
+    }
+
+    int nProcessedTriangle = 0;
     while ( mpCityGMLManager->getNextTriangle( p1, p2, p3 ) )
     {
         auto vGridInfo = mpWTMCalculator->getGridInTriangle( p1, p2, p3 );
-        for ( auto pix : vGridInfo )
+        for ( auto &pix : vGridInfo )
         {
             mpWebTileManager->pushPixelInfo( pix );
+        }
+        if ( mfnProgressFeedback )
+        {
+            mfnProgressFeedback( nProcessedTriangle++ );
         }
     }
     mpWebTileManager->createTilesFromDB();

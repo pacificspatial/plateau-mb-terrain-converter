@@ -27,7 +27,10 @@ union outData
 WebTileManager::WebTileManager(
 	const std::string& strOutputDirectory,
 	const int nMinZoomLevel,
-	const int nMaxZoomLevel )
+	const int nMaxZoomLevel,
+	const std::function<void(std::string)> &fnMessageFeedback,
+	const std::function<void(int)> &fnProgressFeedback
+)
 	:
 	mbValid( false ),
 	mpDb( nullptr ),
@@ -35,15 +38,25 @@ WebTileManager::WebTileManager(
 	mnPushCount( 0 ),
 	mpathOutputDirectory( strOutputDirectory ),
 	mnMinZoomLevel( nMinZoomLevel ),
-	mnMaxZoomLevel( nMaxZoomLevel )
+	mnMaxZoomLevel( nMaxZoomLevel ),
+	mfnMessageFeedback( fnMessageFeedback ),
+	mfnProgressFeedback( fnProgressFeedback )
 {
 	if ( !std::filesystem::exists( mpathOutputDirectory ) )
 	{
+		if ( fnMessageFeedback )
+		{
+			mfnMessageFeedback( "output directory does not exist [ " + mpathOutputDirectory.u8string() + " ]." );
+		}
 		return;
 	}
 
 	if ( !std::filesystem::is_directory( mpathOutputDirectory ) )
 	{
+		if ( fnMessageFeedback )
+		{
+			mfnMessageFeedback( "output is not a directory [ " + mpathOutputDirectory.u8string() + " ]." );
+		}
 		return;
 	}
 	
@@ -263,6 +276,11 @@ bool WebTileManager::createTilesFromDB()
 	sqlite3_stmt *pStmt;
 	std::filesystem::path pathDB = sqlite3_db_filename( mpDb, NULL );
 
+	if ( mfnMessageFeedback )
+	{
+		mfnMessageFeedback( "creating base tiles... " );
+	}
+
 	ERRORCHECK( sqlite3_prepare_v2( mpDb, "select distinct tile_x, tile_y, tile_z from plist;", -1, &pStmt, nullptr ) );
 	while ( sqlite3_step( pStmt ) != SQLITE_DONE )
 	{
@@ -276,6 +294,7 @@ bool WebTileManager::createTilesFromDB()
 
 	uint8_t *pImgBuf = static_cast<uint8_t *>( CPLCalloc( TILE_PIXELS*TILE_PIXELS*4, 1 ) );
 
+	int nProcessedTiles = 0;
 	ERRORCHECK( sqlite3_prepare_v2( mpDb, "select pixel_u,pixel_v,r,g,b,a from plist where tile_x=?1 and tile_y=?2 and tile_z=?3", -1, &pStmt, nullptr ) );
 	for ( auto &t : vTiles )
 	{
@@ -305,6 +324,10 @@ bool WebTileManager::createTilesFromDB()
 		auto bRes = writePng( strFName, pImgBuf );
 		sqlite3_reset( pStmt );
 		std::memset( pImgBuf, 0x00, TILE_PIXELS*TILE_PIXELS*4 );
+		if ( mfnProgressFeedback )
+		{
+			mfnProgressFeedback( nProcessedTiles++ );
+		}
 	}
 	CPLFree( pImgBuf );
 	sqlite3_finalize( pStmt );
@@ -340,13 +363,13 @@ std::vector<TILE_COORD> WebTileManager::getOverviewTileList( std::vector<TILE_CO
 	);
 
 
-#ifdef _DEBUG
-	for ( auto &t : vOverviewTiles )
-	{
-		printf( "x : %7d, y : %7d, z : %7d\n", 
-				t.nX, t.nY, t.nZ );
-	}
-#endif
+//#ifdef _DEBUG
+//	for ( auto &t : vOverviewTiles )
+//	{
+//		printf( "x : %7d, y : %7d, z : %7d\n", 
+//				t.nX, t.nY, t.nZ );
+//	}
+//#endif
 
 	auto pEnd = std::unique( vOverviewTiles.begin(), vOverviewTiles.end(),
 							 []( TILE_COORD &a, TILE_COORD &b )
@@ -365,8 +388,14 @@ bool WebTileManager::buildOverviews( std::vector<TILE_COORD> &vBaseTiles )
 	auto vTiles = getOverviewTileList( vBaseTiles );
 	int nCurrentZoomLevel = vBaseTiles.front().nZ - 1;
 
-	if ( nCurrentZoomLevel > mnMinZoomLevel )
+	if ( nCurrentZoomLevel >= mnMinZoomLevel )
 	{
+		if ( mfnMessageFeedback )
+		{
+			mfnMessageFeedback( "creating zoom level " + std::to_string(nCurrentZoomLevel) + " tiles ..." );
+		}
+
+		int nProcessedTiles = 0;
 		for ( auto& t : vTiles )
 		{
 			std::filesystem::path pathBassTileTL = 
@@ -391,6 +420,10 @@ bool WebTileManager::buildOverviews( std::vector<TILE_COORD> &vBaseTiles )
 			createDirectoryFromTilePath( pathOutput );
 			createOverviewTileFromQuadTiles(
 				pathOutput, pathBassTileTL, pathBassTileTR, pathBassTileBL, pathBassTileBR );
+			if ( mfnProgressFeedback )
+			{
+				mfnProgressFeedback( nProcessedTiles++ );
+			}
 		}
 
 		return buildOverviews( vTiles );
@@ -409,7 +442,10 @@ bool WebTileManager::createDirectoryFromTilePath( const std::filesystem::path pa
 	{
 		if ( !std::filesystem::create_directory( pathZ ) )
 		{
-			std::cerr << "unable to create directory : " << pathZ << std::endl;
+			if ( mfnMessageFeedback )
+			{
+				mfnMessageFeedback( "unable to create directory : " + pathZ.u8string() );
+			}
 			return false;
 		}
 	}
@@ -419,7 +455,10 @@ bool WebTileManager::createDirectoryFromTilePath( const std::filesystem::path pa
 	{
 		if ( !std::filesystem::create_directory( pathX ) )
 		{
-			std::cerr << "unable to create directory : " << pathX << std::endl;
+			if ( mfnMessageFeedback )
+			{
+				mfnMessageFeedback( "unable to create directory : " + pathX.u8string() );
+			}
 			return false;
 		}
 	}

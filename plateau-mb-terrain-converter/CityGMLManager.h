@@ -6,13 +6,17 @@
 #include <gdal_priv.h>
 #include <deque>
 #include <ogr_core.h>
+#include <functional>
 
 
 class CityGMLManager
 {
 public:
 	CityGMLManager() = delete;
-	CityGMLManager( const std::string &strFName );
+	CityGMLManager( 
+		const std::string &strFName,
+		const std::function<void(std::string)> &fnMessageFeedback = nullptr
+	);
 	virtual ~CityGMLManager();
 
 	bool getNextTriangle( OGRPoint &p1, OGRPoint &p2, OGRPoint &p3 );
@@ -39,6 +43,7 @@ private:
 	int mnCurrentTriangle;
 
 	std::string mstrErrorMsg;
+	std::function<void(std::string)> mfnMessageFeedback;
 
 	GDALDatasetUniquePtr mpDS;
 	OGRLayer *mpCurrentLayer;

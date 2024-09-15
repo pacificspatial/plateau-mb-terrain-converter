@@ -232,12 +232,12 @@ std::vector<TILE_PIXEL_INFO> WTMCalculator::getGridInTriangle( OGRPoint p1, OGRP
 				auto pixInfo = calcTilePixelCoordFromTotalPixelCoord( {u, v} );
 				pixInfo.pixValues = calcPix( dZ );
 				vInfo.push_back( std::move(pixInfo) );
-#ifdef _DEBUG
-				auto info = vInfo.back();
-				printf( "tile : [%7d %7d] pix : [%3d %3d] rgb : [%3d %3d %3d %3d]\n",
-						info.tileNum.nX, info.tileNum.nY, info.pixCoord.nU, info.pixCoord.nV, 
-						info.pixValues.nR, info.pixValues.nG, info.pixValues.nB, info.pixValues.nA );
-#endif
+//#ifdef _DEBUG
+//				auto info = vInfo.back();
+//				printf( "tile : [%7d %7d] pix : [%3d %3d] rgb : [%3d %3d %3d %3d]\n",
+//						info.tileNum.nX, info.tileNum.nY, info.pixCoord.nU, info.pixCoord.nV, 
+//						info.pixValues.nR, info.pixValues.nG, info.pixValues.nB, info.pixValues.nA );
+//#endif
 			}
 			//dSX += mWTMResolution.x;
 			u++;

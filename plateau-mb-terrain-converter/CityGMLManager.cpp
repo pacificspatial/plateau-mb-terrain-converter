@@ -5,10 +5,14 @@
 #include <ogrsf_frmts.h>
 
 
-CityGMLManager::CityGMLManager( const std::string& strFName )
+CityGMLManager::CityGMLManager( 
+	const std::string& strFName,
+	const std::function<void(std::string)> &fnMessageFeedback
+)
 	:
 	mbValid( false ),
 	mpCurrentLayer( nullptr ),
+	mfnMessageFeedback( fnMessageFeedback ),
 	mdFilterLonMin( -1.0 ),
 	mdFilterLonMax( -1.0 ),
 	mdFilterLatMin( -1.0 ),
@@ -24,7 +28,16 @@ CityGMLManager::CityGMLManager( const std::string& strFName )
 	if ( !mpDS )
 	{
 		mstrErrorMsg = "unable to open file : [" + strFName + "]";
+		if ( mfnMessageFeedback )
+		{
+			mfnMessageFeedback( mstrErrorMsg );
+		}
 		return;
+	}
+
+	if ( mfnMessageFeedback )
+	{
+		mfnMessageFeedback( "reading CityGML ..." );
 	}
 
 	for ( int i = 0; i < mpDS->GetLayerCount(); i++ )
@@ -55,6 +68,10 @@ CityGMLManager::CityGMLManager( const std::string& strFName )
 	if ( mvTerrainLayersNum.size() == 0 )
 	{
 		mstrErrorMsg = "no terrain layer found.";
+		if ( mfnMessageFeedback )
+		{
+			mfnMessageFeedback( mstrErrorMsg );
+		}
 		return;
 	}
 
@@ -66,6 +83,10 @@ CityGMLManager::CityGMLManager( const std::string& strFName )
 	if ( !mpCurrentFeature )
 	{
 		mstrErrorMsg = "cannot read featurs.";
+		if ( mfnMessageFeedback )
+		{
+			mfnMessageFeedback( mstrErrorMsg );
+		}
 		return;
 	}
 
