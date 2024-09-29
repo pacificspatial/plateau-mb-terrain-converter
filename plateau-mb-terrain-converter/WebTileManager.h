@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "plateau-mb-terrain-converter.h"
 #include "CommonStruct.h"
 
 #include <string>
@@ -20,7 +21,7 @@ public:
 	WebTileManager( const std::string &strOutputDirectory,
 					const int nMinZoomLevel,
 					const int nMaxZoomLevel,
-					const std::function<void(std::string)> &fnMessageFeedback = nullptr,
+					const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback = nullptr,
 					const std::function<void(int)> &fnProgressFeedback = nullptr
 	);
 	virtual ~WebTileManager();
@@ -61,8 +62,7 @@ private:
 	sqlite3_stmt *mpStmt;
 	std::string mstrErrorMsg;
 	std::filesystem::path mpathOutputDirectory;
-
-	std::function<void(std::string)> mfnMessageFeedback;
+	std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> mfnMessageFeedback;
 	std::function<void(int)> mfnProgressFeedback;
 
 #if 0

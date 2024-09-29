@@ -36,8 +36,12 @@ endif()
 target_compile_features(plateau-mb-terrain-converter PRIVATE cxx_std_17)
 target_include_directories(plateau-mb-terrain-converter PRIVATE ${GDAL_INCLUDE_DIR} ${SQLite3_INCLUDE_DIRS} ${PNG_INCLUDE_DIR})
 target_include_directories(plateau-mb-terrain-converter PUBLIC "${plateau-mb-terrain-converter_SOURCE_DIR}/plateau-mb-terrain-converter")
-message(WARNING ${plateau-mb-terrain-converter_SOURCE_DIR}/plateau-mb-terrain-converter)
+#message(WARNING ${plateau-mb-terrain-converter_SOURCE_DIR}/plateau-mb-terrain-converter)
 target_link_libraries(plateau-mb-terrain-converter ${GDAL_LIBRARY} ${SQLite3_LIBRARIES} ${PNG_LIBRARY})
+
+set_target_properties(plateau-mb-terrain-converter PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    PUBLIC_HEADER plateau-mb-terrain-converter.h)
 
 if(BUILD_SHARED_LIBS)
   if(MSVC)
@@ -47,3 +51,9 @@ else()
   target_compile_definitions(plateau-mb-terrain-converter PUBLIC PMTC_DLL_EXPORT=)
 endif()
 
+add_library(${PROJECT_NAMESPACE}::plateau-mb-terrain-converter ALIAS plateau-mb-terrain-converter)
+
+install(TARGETS plateau-mb-terrain-converter 
+    PUBLIC_HEADER DESTINATION include
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION lib)

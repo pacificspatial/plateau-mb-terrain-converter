@@ -28,7 +28,7 @@ WebTileManager::WebTileManager(
 	const std::string& strOutputDirectory,
 	const int nMinZoomLevel,
 	const int nMaxZoomLevel,
-	const std::function<void(std::string)> &fnMessageFeedback,
+	const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback,
 	const std::function<void(int)> &fnProgressFeedback
 )
 	:
@@ -44,18 +44,22 @@ WebTileManager::WebTileManager(
 {
 	if ( !std::filesystem::exists( mpathOutputDirectory ) )
 	{
-		if ( fnMessageFeedback )
+		if ( mfnMessageFeedback )
 		{
-			mfnMessageFeedback( "output directory does not exist [ " + mpathOutputDirectory.u8string() + " ]." );
+			mfnMessageFeedback( 
+				PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+				"output directory does not exist [ " + mpathOutputDirectory.u8string() + " ]." );
 		}
 		return;
 	}
 
 	if ( !std::filesystem::is_directory( mpathOutputDirectory ) )
 	{
-		if ( fnMessageFeedback )
+		if ( mfnMessageFeedback )
 		{
-			mfnMessageFeedback( "output is not a directory [ " + mpathOutputDirectory.u8string() + " ]." );
+			mfnMessageFeedback( 
+				PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+				"output is not a directory [ " + mpathOutputDirectory.u8string() + " ]." );
 		}
 		return;
 	}
@@ -278,7 +282,7 @@ bool WebTileManager::createTilesFromDB()
 
 	if ( mfnMessageFeedback )
 	{
-		mfnMessageFeedback( "creating base tiles... " );
+		mfnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_INFO, "creating base tiles... " );
 	}
 
 	ERRORCHECK( sqlite3_prepare_v2( mpDb, "select distinct tile_x, tile_y, tile_z from plist;", -1, &pStmt, nullptr ) );
@@ -392,7 +396,9 @@ bool WebTileManager::buildOverviews( std::vector<TILE_COORD> &vBaseTiles )
 	{
 		if ( mfnMessageFeedback )
 		{
-			mfnMessageFeedback( "creating zoom level " + std::to_string(nCurrentZoomLevel) + " tiles ..." );
+			mfnMessageFeedback( 
+				PlateauMapboxTerrainConverter::MESSAGE_INFO, 
+				"creating zoom level " + std::to_string(nCurrentZoomLevel) + " tiles ..." );
 		}
 
 		int nProcessedTiles = 0;
@@ -444,7 +450,9 @@ bool WebTileManager::createDirectoryFromTilePath( const std::filesystem::path pa
 		{
 			if ( mfnMessageFeedback )
 			{
-				mfnMessageFeedback( "unable to create directory : " + pathZ.u8string() );
+				mfnMessageFeedback( 
+					PlateauMapboxTerrainConverter::MESSAGE_ERROR,									 
+					"unable to create directory : " + pathZ.u8string() );
 			}
 			return false;
 		}
@@ -457,7 +465,9 @@ bool WebTileManager::createDirectoryFromTilePath( const std::filesystem::path pa
 		{
 			if ( mfnMessageFeedback )
 			{
-				mfnMessageFeedback( "unable to create directory : " + pathX.u8string() );
+				mfnMessageFeedback( 
+					PlateauMapboxTerrainConverter::MESSAGE_ERROR, 
+					"unable to create directory : " + pathX.u8string() );
 			}
 			return false;
 		}

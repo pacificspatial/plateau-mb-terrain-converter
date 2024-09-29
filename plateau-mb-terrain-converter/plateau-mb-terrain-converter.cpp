@@ -15,7 +15,7 @@ PlateauMapboxTerrainConverter::PlateauMapboxTerrainConverter(
     const std::string& strOutputTileDirectory,
     const int nMinZoomLevel,
     const int nMaxZoomLevel,
-    const std::function<void(std::string)> &fnMessageFeedback,
+    const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback,
     const std::function<void(int)> &fnProgressFeedback
 )
     : 
@@ -33,9 +33,14 @@ PlateauMapboxTerrainConverter::PlateauMapboxTerrainConverter(
         return;
     }
 
-    mpCityGMLManager = std::make_unique<CityGMLManager>( strInputTerrainCityGML, mfnMessageFeedback );
+    if ( mfnMessageFeedback )
+    {
+        mfnMessageFeedback( MESSAGE_INFO, "reading CityGML ..." );
+    }
+    mpCityGMLManager = std::make_unique<CityGMLManager>( strInputTerrainCityGML );
     if ( !mpCityGMLManager->isValid() )
     {
+        mfnMessageFeedback( MESSAGE_ERROR, mpCityGMLManager->getLastError() );
         return;
     }
 
@@ -68,7 +73,7 @@ void PlateauMapboxTerrainConverter::createTileset()
 
     if ( mfnMessageFeedback )
     {
-        mfnMessageFeedback( "calculating grid height in triangles ..." );
+        mfnMessageFeedback( MESSAGE_INFO, "calculating grid height in triangles ..." );
     }
 
     int nProcessedTriangle = 0;

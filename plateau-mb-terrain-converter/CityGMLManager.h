@@ -13,10 +13,7 @@ class CityGMLManager
 {
 public:
 	CityGMLManager() = delete;
-	CityGMLManager( 
-		const std::string &strFName,
-		const std::function<void(std::string)> &fnMessageFeedback = nullptr
-	);
+	CityGMLManager( const std::string &strFName	);
 	virtual ~CityGMLManager();
 
 	bool getNextTriangle( OGRPoint &p1, OGRPoint &p2, OGRPoint &p3 );
@@ -25,6 +22,7 @@ public:
 	const OGREnvelope& getExtent() const;
 
 	inline bool isValid() const { return mbValid; }
+	inline std::string getLastError() const { return mstrErrorMsg; }
 
 private:
 	bool mbValid;
@@ -43,7 +41,7 @@ private:
 	int mnCurrentTriangle;
 
 	std::string mstrErrorMsg;
-	std::function<void(std::string)> mfnMessageFeedback;
+//	std::function<void(std::string)> mfnMessageFeedback;
 
 	GDALDatasetUniquePtr mpDS;
 	OGRLayer *mpCurrentLayer;

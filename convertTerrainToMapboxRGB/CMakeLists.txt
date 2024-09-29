@@ -4,3 +4,4 @@ add_executable(convertTerrainToMapboxRGB convertTerrainToMapboxRGB_main.cpp)
 target_compile_features(convertTerrainToMapboxRGB PUBLIC cxx_std_17)
 target_link_libraries(convertTerrainToMapboxRGB PRIVATE plateau-mb-terrain-converter)
 
+install(TARGETS convertTerrainToMapboxRGB RUNTIME DESTINATION bin)

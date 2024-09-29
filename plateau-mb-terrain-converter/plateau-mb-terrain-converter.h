@@ -7,6 +7,7 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <iostream>
 
 
 #ifndef PMTC_DLL
@@ -32,13 +33,22 @@ class WebTileManager;
 class PMTC_DLL PlateauMapboxTerrainConverter
 {
 public:
+
+    enum MESSAGE_STATUS
+    {
+        MESSAGE_INFO,
+        MESSAGE_WARNING,
+        MESSAGE_ERROR
+    };
+
+
     PlateauMapboxTerrainConverter() = delete;
     PlateauMapboxTerrainConverter(
         const std::string &strInputTerrainCityGML, 
         const std::string &strOutputTileDirectory, 
         const int nMinZoomLevel, 
         const int nMaxZoomLevel,
-        const std::function<void(std::string)> &fnMessageFeedback = nullptr,
+        const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback = nullptr,
         const std::function<void(int)> &fnProgressFeedback = nullptr
     );
     virtual ~PlateauMapboxTerrainConverter();
@@ -58,7 +68,7 @@ private:
     std::unique_ptr<CityGMLManager> mpCityGMLManager;
     std::unique_ptr<WebTileManager> mpWebTileManager;
 
-    std::function<void(std::string)> mfnMessageFeedback;
+    std::function<void(MESSAGE_STATUS, std::string)> mfnMessageFeedback;
     std::function<void(int)> mfnProgressFeedback;
 };
 
