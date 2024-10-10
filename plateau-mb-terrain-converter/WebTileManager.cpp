@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <algorithm>
 #include <iostream>
+#include <cstring>
 
 
 #define ERRORCHECK(f) \
@@ -62,6 +63,24 @@ WebTileManager::WebTileManager(
 				"output is not a directory [ " + mpathOutputDirectory.u8string() + " ]." );
 		}
 		return;
+	}
+
+	if ( mnMinZoomLevel < 0 || mnMaxZoomLevel < 0 ||
+		 ( mnMinZoomLevel > mnMaxZoomLevel )
+		 )
+	{
+		mfnMessageFeedback(
+			PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+			"Invalid zoom level : " + std::to_string(mnMinZoomLevel) + " - " + std::to_string(mnMaxZoomLevel) );
+		return;
+	}
+
+	if ( mnMaxZoomLevel >= 18 )
+	{
+		mfnMessageFeedback(
+			PlateauMapboxTerrainConverter::MESSAGE_WARNING,
+			"Zoom levels above 18 can result in too many files being generated."
+		);
 	}
 	
 	std::filesystem::path pathDB = mpathOutputDirectory;
@@ -279,6 +298,8 @@ bool WebTileManager::createTilesFromDB()
 	std::vector<TILE_COORD> vTiles;
 	sqlite3_stmt *pStmt;
 	std::filesystem::path pathDB = sqlite3_db_filename( mpDb, NULL );
+	uint8_t *pImgBuf;
+	int nProcessedTiles = 0;
 
 	if ( mfnMessageFeedback )
 	{
@@ -296,9 +317,8 @@ bool WebTileManager::createTilesFromDB()
 	}
 	sqlite3_finalize( pStmt );
 
-	uint8_t *pImgBuf = static_cast<uint8_t *>( CPLCalloc( TILE_PIXELS*TILE_PIXELS*4, 1 ) );
+	pImgBuf = static_cast<uint8_t *>( CPLCalloc( TILE_PIXELS*TILE_PIXELS*4, 1 ) );
 
-	int nProcessedTiles = 0;
 	ERRORCHECK( sqlite3_prepare_v2( mpDb, "select pixel_u,pixel_v,r,g,b,a from plist where tile_x=?1 and tile_y=?2 and tile_z=?3", -1, &pStmt, nullptr ) );
 	for ( auto &t : vTiles )
 	{

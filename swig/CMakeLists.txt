@@ -12,7 +12,7 @@ if(UNIX AND NOT APPLE)
   list(APPEND CMAKE_SWIG_FLAGS "-DSWIGWORDSIZE64")
 endif()
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 if(NOT Python3_FOUND)
   message(SEND_ERROR "Python3 not found.")
   return()
@@ -58,6 +58,12 @@ target_link_libraries(pyPMTC PRIVATE ${PROJECT_NAMESPACE}::plateau-mb-terrain-co
 # see: https://cmake.org/cmake/help/git-stage/command/target_link_libraries.html#command:target_link_libraries
 if(MSVC)
   target_link_libraries(pyPMTC PRIVATE ${Python3_LIBRARIES})
+endif()
+
+if (UNIX)
+    set_target_properties(pyPMTC 
+	    PROPERTIES INSTALL_RPATH
+	    ${CMAKE_INSTALL_PREFIX}/lib)
 endif()
 
 install(TARGETS pyPMTC LIBRARY DESTINATION python)

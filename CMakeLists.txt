@@ -12,6 +12,9 @@ project (plateau-mb-terrain-converter
 	)
 set(PROJECT_NAMESPACE pmtc)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+set(PACKAGE_NAME libPMTC)
+
+message(${plateau-mb-terrain-converter_SOURCE_DIR})
 
 set(PMTC_SOURCE_DIR plateau-mb-terrain-converter_SOURCE_DIR)
 

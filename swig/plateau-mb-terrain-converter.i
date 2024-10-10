@@ -11,20 +11,20 @@
 
 %include "../plateau-mb-terrain-converter/plateau-mb-terrain-converter.h"
 
-%feature("director") Feedback;
+%feature("director") PMTCFeedback;
 
 %inline %{
-class Feedback
+class PMTCFeedback
 {
 public:
 	virtual void messageFeedback(PlateauMapboxTerrainConverter::MESSAGE_STATUS eStatus, const std::string &strMessage ) = 0;
 	virtual void progressFeedback( int nProgress ) = 0;
-	virtual ~Feedback(){}
+	virtual ~PMTCFeedback(){}
 };
 %}
 
 %{
-static Feedback *gpFeedback = nullptr;
+static PMTCFeedback *gpFeedback = nullptr;
 static void messageCallbackHandler( PlateauMapboxTerrainConverter::MESSAGE_STATUS eStatus, const std::string &strMessage )
 {
 	if ( gpFeedback )
@@ -51,7 +51,7 @@ public:
         const std::string &strOutputTileDirectory, 
         const int nMinZoomLevel, 
         const int nMaxZoomLevel,
-		Feedback *pFeedback
+		PMTCFeedback *pFeedback
 	)
 	{
 		gpFeedback = pFeedback;
@@ -65,7 +65,8 @@ public:
 		);
 	}
 
-	inline void progress(){ if ( mObj->isValid() ) mObj->createTileset(); }
+	inline void createTileset(){ if ( mObj->isValid() ) mObj->createTileset(); }
+	inline bool isValid() const { return mObj->isValid(); }
 
 private:
 	std::unique_ptr<PlateauMapboxTerrainConverter> mObj = nullptr;
