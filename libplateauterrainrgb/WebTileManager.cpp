@@ -48,10 +48,9 @@ WebTileManager::WebTileManager(
 		if ( mfnMessageFeedback )
 		{
 			mfnMessageFeedback( 
-				PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+				PlateauMapboxTerrainConverter::MESSAGE_WARNING,
 				"output directory does not exist [ " + mpathOutputDirectory.u8string() + " ]." );
 		}
-		return;
 	}
 
 	if ( !std::filesystem::is_directory( mpathOutputDirectory ) )
@@ -110,7 +109,11 @@ WebTileManager::WebTileManager(
 	return;
 
 ERROR:
-	mstrErrorMsg = sqlite3_errstr( sqlite3_errcode(mpDb) );
+	if ( mfnMessageFeedback )
+	{
+		mfnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR, 
+							sqlite3_errstr( sqlite3_errcode(mpDb) ) );
+	}
 }
 
 
@@ -158,7 +161,11 @@ bool WebTileManager::pushPixelInfo( const TILE_PIXEL_INFO& info )
 	return true;
 
 ERROR:
-	mstrErrorMsg = sqlite3_errstr( sqlite3_errcode(mpDb) );
+	if ( mfnMessageFeedback )
+	{
+		mfnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR, 
+							sqlite3_errstr( sqlite3_errcode(mpDb) ) );
+	}
 	sqlite3_finalize( mpStmt );
 	return false;
 }
@@ -219,6 +226,61 @@ bool WebTileManager::writePng(  const std::string strFName, uint8_t *pImg )
 	png.format = PNG_FORMAT_RGBA;
 
 	return png_image_write_to_file( &png, strFName.c_str(), 0, pImg, PNG_IMAGE_ROW_STRIDE(png), nullptr ) != 0;
+}
+
+
+bool WebTileManager::mergePng( const std::string strFName, uint8_t *pImg )
+{
+	png_image png;
+	uint32_t nStride, nWidth, nHeight;
+	uint8_t *pBuf;
+	bool bRet;
+
+	std::memset( &png, 0x00, sizeof(png_image) );
+	png.version = PNG_IMAGE_VERSION;
+
+	png_image_begin_read_from_file( &png, strFName.c_str() );
+	if ( PNG_IMAGE_FAILED(png) )
+	{
+		return writePng( strFName, pImg );
+	}
+
+	nWidth = png.width;
+	nHeight = png.height;
+	if ( nWidth != TILE_PIXELS || nHeight != TILE_PIXELS )
+	{
+		if ( mfnMessageFeedback )
+		{
+			mfnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR, 
+								"tile size that will be merged is not 256." );
+			png_image_free( &png );
+			return false;
+		}
+	}
+
+	nStride = PNG_IMAGE_ROW_STRIDE( png );
+	pBuf = new uint8_t[PNG_IMAGE_BUFFER_SIZE(png, nStride)];
+	png_image_finish_read( &png, nullptr, pBuf, nStride, nullptr );
+
+	png_image_free( &png );
+
+	// merge
+	for ( int i = 0; i < TILE_PIXELS * TILE_PIXELS * 4; i += 4 )
+	{
+		if ( pBuf[i + 3] == 0 )
+		{
+			pBuf[i+0] = pImg[i+0];
+			pBuf[i+1] = pImg[i+1];
+			pBuf[i+2] = pImg[i+2];
+			pBuf[i+3] = pImg[i+3];
+		}
+	}
+
+	bRet = writePng( strFName, pBuf );
+
+	delete[] pBuf;
+
+	return bRet;
 }
 
 
@@ -300,6 +362,7 @@ bool WebTileManager::createTilesFromDB()
 	std::filesystem::path pathDB = sqlite3_db_filename( mpDb, NULL );
 	uint8_t *pImgBuf;
 	int nProcessedTiles = 0;
+	bool bRes;
 
 	if ( mfnMessageFeedback )
 	{
@@ -345,7 +408,16 @@ bool WebTileManager::createTilesFromDB()
 			sqlite3_finalize( pStmt );
 			return false;
 		}
-		auto bRes = writePng( strFName, pImgBuf );
+
+		if ( std::filesystem::exists( std::filesystem::path( strFName ) ) )
+		{
+			bRes = mergePng( strFName, pImgBuf );
+		}
+		else
+		{
+			bRes = writePng( strFName, pImgBuf );
+		}
+
 		sqlite3_reset( pStmt );
 		std::memset( pImgBuf, 0x00, TILE_PIXELS*TILE_PIXELS*4 );
 		if ( mfnProgressFeedback )
@@ -358,10 +430,16 @@ bool WebTileManager::createTilesFromDB()
 
 	buildOverviews( vTiles );
 
-	return true;
+	return bRes;
 
 ERROR:
-	mstrErrorMsg = sqlite3_errstr( sqlite3_errcode(mpDb) );
+	if ( mfnMessageFeedback )
+	{
+		mfnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR, 
+							sqlite3_errstr( sqlite3_errcode(mpDb) ) );
+	}
+	sqlite3_finalize( mpStmt );
+
 	return false;
 }
 

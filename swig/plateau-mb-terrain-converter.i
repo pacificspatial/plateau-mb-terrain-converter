@@ -3,13 +3,13 @@
 %include <windows.i>
 
 %{
-#include "../plateau-mb-terrain-converter/plateau-mb-terrain-converter.h"
+#include "../libplateauterrainrgb/plateau-mb-terrain-converter.h"
 #include <memory>
 #include <iostream>
 #include <functional>
 %}
 
-%include "../plateau-mb-terrain-converter/plateau-mb-terrain-converter.h"
+%include "../libplateauterrainrgb/plateau-mb-terrain-converter.h"
 
 %feature("director") PMTCFeedback;
 

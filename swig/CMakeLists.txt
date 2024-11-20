@@ -20,51 +20,51 @@ endif()
 
 list(APPEND CMAKE_SWIG_FLAGS "-py3" "-DPY3")
 
-set(PYTHON_PROJECT python-plateau-mb-terrain-converter)
+set(PYTHON_PROJECT pyplateauterrainrgb)
 set(PYTHON_PROJECT_DIR ${PROJECT_BINARY_DIR}/python/${PYTHON_PROJECT})
 
 set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
 set_property(SOURCE plateau-mb-terrain-converter.i PROPERTY CPLUSPLUS ON)
-set_property(SOURCE plateau-mb-terrain-converter.i PROPERTY SWIG_MODULE_NAME pyPMTC)
+set_property(SOURCE plateau-mb-terrain-converter.i PROPERTY SWIG_MODULE_NAME pyplateauterrainrgb)
 
-swig_add_library(pyPMTC
+swig_add_library(pyplateauterrainrgb
   TYPE MODULE
   LANGUAGE python
   OUTPUT_DIR ${PYTHON_PROJECT_DIR}
   SOURCES plateau-mb-terrain-converter.i)
 
-add_library(${PROJECT_NAMESPACE}::pyPMTC ALIAS pyPMTC)
-target_include_directories(pyPMTC PRIVATE ../plateau-mb-terrain-converter ${Python3_INCLUDE_DIRS} ${GDAL_LIBRARY})
-set_property(TARGET pyPMTC PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES ON)
+add_library(${PROJECT_NAMESPACE}::pyplateauterrainrgb ALIAS pyplateauterrainrgb)
+target_include_directories(pyplateauterrainrgb PRIVATE ../libplateauterrainrgb ${Python3_INCLUDE_DIRS} ${GDAL_LIBRARY})
+set_property(TARGET pyplateauterrainrgb PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES ON)
 
 if(APPLE)
-  set_target_properties(pyPMTC PROPERTIES
+  set_target_properties(pyplateauterrainrgb PROPERTIES
     SUFFIX ".so"
     INSTALL_RPATH "@loader_path;@loader_path/../../${PYTHON_PROJECT}/.libs"
     )
-  set_property(TARGET pyPMTC APPEND PROPERTY
+  set_property(TARGET pyplateauterrainrgb APPEND PROPERTY
     LINK_FLAGS "-flat_namespace -undefined suppress"
     )
 elseif(UNIX)
-  set_target_properties(pyPMTC PROPERTIES
+  set_target_properties(pyplateauterrainrgb PROPERTIES
     INSTALL_RPATH "$ORIGIN:$ORIGIN/../../${PYTHON_PROJECT}/.libs"
     )
 endif()
-target_link_libraries(pyPMTC PRIVATE ${PROJECT_NAMESPACE}::plateau-mb-terrain-converter)
+target_link_libraries(pyplateauterrainrgb PRIVATE ${PROJECT_NAMESPACE}::libplateauterrainrgb)
 
 # Variable PYTHON_LIBRARIES can contains keyword `optimized`
 # which won't be interpreted inside a generator expression.
 # i.e. we can't use: $<$<PLATFORM_ID:Windows>:${PYTHON_LIBRARIES}>
 # see: https://cmake.org/cmake/help/git-stage/command/target_link_libraries.html#command:target_link_libraries
 if(MSVC)
-  target_link_libraries(pyPMTC PRIVATE ${Python3_LIBRARIES})
+  target_link_libraries(pyplateauterrainrgb PRIVATE ${Python3_LIBRARIES})
 endif()
 
 if (UNIX)
-    set_target_properties(pyPMTC 
+    set_target_properties(pyplateauterrainrgb 
 	    PROPERTIES INSTALL_RPATH
 	    ${CMAKE_INSTALL_PREFIX}/lib)
 endif()
 
-install(TARGETS pyPMTC LIBRARY DESTINATION python)
-install(FILES ${PYTHON_PROJECT_DIR}/pyPMTC.py DESTINATION python)
+install(TARGETS pyplateauterrainrgb LIBRARY DESTINATION python)
+install(FILES ${PYTHON_PROJECT_DIR}/pyplateauterrainrgb.py DESTINATION python)

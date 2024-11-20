@@ -18,6 +18,6 @@ message(${plateau-mb-terrain-converter_SOURCE_DIR})
 
 set(PMTC_SOURCE_DIR plateau-mb-terrain-converter_SOURCE_DIR)
 
-add_subdirectory ("plateau-mb-terrain-converter")
-add_subdirectory ("convertTerrainToMapboxRGB")
+add_subdirectory ("libplateauterrainrgb")
+add_subdirectory ("tools")
 add_subdirectory ("swig")

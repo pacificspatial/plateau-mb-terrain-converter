@@ -27,7 +27,7 @@ public:
 	virtual ~WebTileManager();
 
 	inline bool isValid() const { return mbValid; }
-	inline std::string getDbError() const { return mstrErrorMsg; }
+	//inline std::string getDbError() const { return mstrErrorMsg; }
 
 	bool pushPixelInfo( const TILE_PIXEL_INFO &info );
 	bool createTilesFromDB();
@@ -40,6 +40,7 @@ private:
 	bool writePng( const std::string strFName, uint8_t *pImgR, uint8_t *pImgG, uint8_t *pImgB, uint8_t *pImgA );
 #endif
 	bool writePng( const std::string strFName, uint8_t *pImg );
+	bool mergePng( const std::string strFName, uint8_t *pImg );
 	bool readPng( const std::string strFName, uint8_t **pImg );
 	std::string makeOutputFilePath( const std::filesystem::path pathBase, const int nX, const int nY, const int nZ );
 	bool createDirectoryFromTilePath( const std::filesystem::path pathTileName );
@@ -60,7 +61,7 @@ private:
 	int mnPushCount;
 	sqlite3 *mpDb;
 	sqlite3_stmt *mpStmt;
-	std::string mstrErrorMsg;
+	//std::string mstrErrorMsg;
 	std::filesystem::path mpathOutputDirectory;
 	std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> mfnMessageFeedback;
 	std::function<void(int)> mfnProgressFeedback;

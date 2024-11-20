@@ -14,7 +14,7 @@ WTMCalculator.h
 CommonStruct.h
  "CityGMLManager.h")
 
-add_library (plateau-mb-terrain-converter SHARED ${lib_SRC} ${lib_HEADERS})
+add_library (libplateauterrainrgb SHARED ${lib_SRC} ${lib_HEADERS})
 
 find_package(PNG REQUIRED)
 if (NOT PNG_FOUND)
@@ -33,27 +33,27 @@ if (NOT GDAL_FOUND)
   message(SEND_ERROR "Gdal was not found.")
 endif()
 
-target_compile_features(plateau-mb-terrain-converter PRIVATE cxx_std_17)
-target_include_directories(plateau-mb-terrain-converter PRIVATE ${GDAL_INCLUDE_DIR} ${SQLite3_INCLUDE_DIRS} ${PNG_INCLUDE_DIR})
-target_include_directories(plateau-mb-terrain-converter PUBLIC 
-    $<BUILD_INTERFACE:${plateau-mb-terrain-converter_SOURCE_DIR}/plateau-mb-terrain-converter>
+target_compile_features(libplateauterrainrgb PRIVATE cxx_std_17)
+target_include_directories(libplateauterrainrgb PRIVATE ${GDAL_INCLUDE_DIR} ${SQLite3_INCLUDE_DIRS} ${PNG_INCLUDE_DIR})
+target_include_directories(libplateauterrainrgb PUBLIC 
+    $<BUILD_INTERFACE:${plateau-mb-terrain-converter_SOURCE_DIR}/libplateauterrainrgb>
     $<INSTALL_INTERFACE:include>)
 #message(WARNING ${plateau-mb-terrain-converter_SOURCE_DIR}/plateau-mb-terrain-converter)
-target_link_libraries(plateau-mb-terrain-converter ${GDAL_LIBRARY} ${SQLite3_LIBRARIES} ${PNG_LIBRARY})
+target_link_libraries(libplateauterrainrgb ${GDAL_LIBRARY} ${SQLite3_LIBRARIES} ${PNG_LIBRARY})
 
-set_target_properties(plateau-mb-terrain-converter PROPERTIES
+set_target_properties(libplateauterrainrgb PROPERTIES
     VERSION ${PROJECT_VERSION}
     PUBLIC_HEADER plateau-mb-terrain-converter.h)
 
 if(BUILD_SHARED_LIBS)
   if(MSVC)
-    target_compile_definitions(plateau-mb-terrain-converter PRIVATE PMTC_DLL_EXPORT=1)
+    target_compile_definitions(libplateauterrainrgb PRIVATE PMTC_DLL_EXPORT=1)
   endif()
 else()
-  target_compile_definitions(plateau-mb-terrain-converter PUBLIC PMTC_DLL_EXPORT=)
+  target_compile_definitions(libplateauterrainrgb PUBLIC PMTC_DLL_EXPORT=)
 endif()
 
-add_library(${PROJECT_NAMESPACE}::plateau-mb-terrain-converter ALIAS plateau-mb-terrain-converter)
+add_library(${PROJECT_NAMESPACE}::libplateauterrainrgb ALIAS libplateauterrainrgb)
 
 #if (UNIX)
 #    get_filename_component(PNG_LIBDIRS ${PNG_LIBRARIES} PATH)
@@ -71,7 +71,7 @@ add_library(${PROJECT_NAMESPACE}::plateau-mb-terrain-converter ALIAS plateau-mb-
 
 include(GNUInstallDirs)
 
-install(TARGETS plateau-mb-terrain-converter 
+install(TARGETS libplateauterrainrgb 
     EXPORT ${PACKAGE_NAME}Targets
     PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
