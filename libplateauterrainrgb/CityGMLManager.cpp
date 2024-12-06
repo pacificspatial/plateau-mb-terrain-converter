@@ -3,6 +3,7 @@
 
 #include <gdal_priv.h>
 #include <ogrsf_frmts.h>
+#include <iostream>
 
 
 CityGMLManager::CityGMLManager( 
@@ -17,6 +18,7 @@ CityGMLManager::CityGMLManager(
 	mdFilterLatMax( -1.0 )
 {
 	GDALAllRegister();
+	CPLSetConfigOption( "GML_SRS_DIMENSION_IF_MISSING", "3" );
 	char **papszAllowedDrivers = nullptr;
 
 	papszAllowedDrivers = CSLAddString( papszAllowedDrivers, "GML" );
@@ -75,6 +77,8 @@ CityGMLManager::CityGMLManager(
 	auto geom = mpCurrentFeature->GetGeometryRef();
 	mpCurrentGeom = geom->toTriangulatedSurface();
 
+	//std::cout << mEnvelop.MinX << " | " << mEnvelop.MinY << std::endl;
+
 	mbValid = true;
 }
 
@@ -104,7 +108,10 @@ const OGRSpatialReference* CityGMLManager::getSpatialRef() const
 {
 	if ( !mbValid ) return nullptr;
 
-	return mpDS->GetSpatialRef();
+	auto cs = mpDS->GetSpatialRef();
+	if ( !cs ) return nullptr;
+
+	return cs;
 }
 
 
@@ -159,6 +166,8 @@ bool CityGMLManager::getNextTriangle( OGRPoint& p1, OGRPoint& p2, OGRPoint& p3 )
 	geomTriRing->getPoint( 1, &p2 );
 	geomTriRing->getPoint( 2, &p3 );
 	mnCurrentTriangle++;
+
+	//std::cout << p1.getX() << " | " << p1.getY() << std::endl;
 
 	return true;
 }

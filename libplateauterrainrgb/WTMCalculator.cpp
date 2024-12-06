@@ -4,7 +4,7 @@
 
 #include <cmath>
 #include <iostream>
-
+#include <iomanip>
 
 #define WTM_MIN_X -20037508.342789244
 #define WTM_MAX_Y 20037508.342789244
@@ -20,7 +20,8 @@ WTMCalculator::WTMCalculator( const OGRSpatialReference *poSrs, int nPixels, int
 	mSourceEpsg(*poSrs),
 	mnTilePixels(nPixels),
 	mnZoomLevel(nZoomLevel),
-	meType(eType)
+	meType(eType),
+	mTransform(nullptr)
 {
 	mWTMResolution = calcWTMResolution( mnZoomLevel, mnTilePixels );
 	prepareTransformer();
@@ -40,7 +41,11 @@ void WTMCalculator::prepareTransformer()
 //	poSrsSrc.importFromEPSG( mnSourceEpsg );
 	poSrsDst.importFromEPSG( 3857 );
 	OGRCoordinateTransformationOptions options = OGRCoordinateTransformationOptions();
-	options.SetBallparkAllowed( true );
+	//options.SetBallparkAllowed( true );
+	//char* pszWkt;
+	//mSourceEpsg.exportToWkt( &pszWkt );
+	//std::cout << pszWkt << std::endl;
+	//CPLFree( pszWkt );
 	mTransform = OGRCreateCoordinateTransformation( &mSourceEpsg, &poSrsDst, options );	
 }
 
@@ -217,11 +222,11 @@ std::vector<TILE_PIXEL_INFO> WTMCalculator::getGridInTriangle( OGRPoint p1, OGRP
 	uint64_t v = pixcoord_bbox_tl.nV;
 	while ( v <= pixcoord_bbox_br.nV )
 	{
-		dSY = WTM_MAX_Y - v * mWTMResolution.getY() + 1;
+		dSY = WTM_MAX_Y - (v+0.5) * mWTMResolution.getY();
 		uint64_t u = pixcoord_bbox_tl.nU;
 		while ( u < pixcoord_bbox_br.nU )
 		{
-			dSX = WTM_MIN_X + u * mWTMResolution.getX() + 1;
+			dSX = WTM_MIN_X + (u+0.5) * mWTMResolution.getX();
 			f1 = clcw( {dSX, dSY}, p1, p2 );
 			f2 = clcw( {dSX, dSY}, p2, p3 );
 			f3 = clcw( {dSX, dSY}, p3, p1 );

@@ -52,9 +52,12 @@ PlateauMapboxTerrainConverter::PlateauMapboxTerrainConverter(
     }
     else
     {
+        std::cout << "srs is not defined.. " << std::endl;
         OGRSpatialReference oSrs;
         oSrs.importFromEPSG( 4612 );
         oSrs.SetAxisMappingStrategy( OAMS_TRADITIONAL_GIS_ORDER );
+        //oSrs.SetDataAxisToSRSAxisMapping( {1, 0} );
+
         mpWTMCalculator = std::make_unique<WTMCalculator>( &oSrs, TILE_PIXELS, mnMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
     }
 
