@@ -1,10 +1,10 @@
 #include "WTMCalculator.h"
 
-
-
 #include <cmath>
 #include <iostream>
 #include <iomanip>
+#include <stdexcept>
+
 
 #define WTM_MIN_X -20037508.342789244
 #define WTM_MAX_Y 20037508.342789244
@@ -52,9 +52,14 @@ void WTMCalculator::prepareTransformer()
 
 WTM_BBOX WTMCalculator::calcTriangleToWTMBbox( OGRPoint &p1, OGRPoint &p2, OGRPoint &p3 )
 {
-	p1.transform( mTransform );
-	p2.transform( mTransform );
-	p3.transform( mTransform );
+	if (
+		p1.transform( mTransform ) != OGRERR_NONE ||
+		p2.transform( mTransform ) != OGRERR_NONE ||
+		p3.transform( mTransform ) != OGRERR_NONE
+		)
+	{
+		throw std::domain_error( "Invalid coordinate detected." );
+	}
 
 	double dMinX = std::min( std::min(p1.getX(), p2.getX()), p3.getX() );
 	double dMaxX = std::max( std::max(p1.getX(), p2.getX()), p3.getX() );

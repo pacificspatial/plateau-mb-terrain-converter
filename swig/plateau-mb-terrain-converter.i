@@ -68,6 +68,19 @@ public:
 	inline void createTileset(){ if ( mObj->isValid() ) mObj->createTileset(); }
 	inline bool isValid() const { return mObj->isValid(); }
 
+    inline static void mergeTilesets( 
+        const std::string& strSourceDir1, 
+        const std::string& strSourceDir2, 
+        const std::string& strOutDir, 
+		PMTCFeedback *pFeedback
+        )
+	{
+		gpFeedback = pFeedback;
+		PlateauMapboxTerrainConverter::mergeTilesets(
+			strSourceDir1, strSourceDir2, strOutDir, &messageCallbackHandler, &progressCallbackHandler
+		);
+	}
+
 private:
 	std::unique_ptr<PlateauMapboxTerrainConverter> mObj = nullptr;
 };

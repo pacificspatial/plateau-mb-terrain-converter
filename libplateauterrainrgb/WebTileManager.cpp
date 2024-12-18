@@ -119,14 +119,15 @@ ERROR:
 
 WebTileManager::~WebTileManager()
 {
-#if 0
-	std::filesystem::path pathDB = sqlite3_db_filename( mpDb, NULL );
-	sqlite3_close_v2( mpDb );
-	if ( std::filesystem::exists( pathDB ) )
+	if ( mpDb )
 	{
-		std::filesystem::remove( pathDB );
+		std::filesystem::path pathDB = sqlite3_db_filename( mpDb, NULL );
+		sqlite3_close_v2( mpDb );
+		if ( std::filesystem::exists( pathDB ) )
+		{
+			std::filesystem::remove( pathDB );
+		}
 	}
-#endif
 }
 
 
@@ -168,6 +169,20 @@ ERROR:
 	}
 	sqlite3_finalize( mpStmt );
 	return false;
+}
+
+
+void WebTileManager::finalizePushing()
+{
+	ERRORCHECK( sqlite3_exec( mpDb, "commit", nullptr, nullptr, nullptr ) );
+
+ERROR:
+	if ( mfnMessageFeedback )
+	{
+		mfnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+			sqlite3_errstr( sqlite3_errcode( mpDb ) ) );
+	}
+	sqlite3_finalize( mpStmt );
 }
 
 
@@ -215,7 +230,7 @@ bool WebTileManager::writePng( const std::string strFName, uint8_t *pImgR, uint8
 #endif
 
 
-bool WebTileManager::writePng(  const std::string strFName, uint8_t *pImg )
+bool WebTileManager::writePng(  const std::string &strFName, uint8_t *pImg )
 {
 	png_image png;
 
@@ -229,7 +244,8 @@ bool WebTileManager::writePng(  const std::string strFName, uint8_t *pImg )
 }
 
 
-bool WebTileManager::mergePng( const std::string strFName, uint8_t *pImg )
+bool WebTileManager::mergePng( const std::string &strFName, uint8_t *pImg,
+	const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback )
 {
 	png_image png;
 	uint32_t nStride, nWidth, nHeight;
@@ -249,9 +265,9 @@ bool WebTileManager::mergePng( const std::string strFName, uint8_t *pImg )
 	nHeight = png.height;
 	if ( nWidth != TILE_PIXELS || nHeight != TILE_PIXELS )
 	{
-		if ( mfnMessageFeedback )
+		if ( fnMessageFeedback )
 		{
-			mfnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR, 
+			fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR, 
 								"tile size that will be merged is not 256." );
 			png_image_free( &png );
 			return false;
@@ -281,6 +297,28 @@ bool WebTileManager::mergePng( const std::string strFName, uint8_t *pImg )
 	delete[] pBuf;
 
 	return bRet;
+}
+
+
+bool WebTileManager::mergePng( const std::string& strSrcFName, const std::string& strDstFName, 
+	const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback )
+{
+	uint8_t *pImgIn = static_cast<uint8_t *>( std::malloc( TILE_PIXELS*TILE_PIXELS*4 ) );
+	std::memset( pImgIn, 0x00, TILE_PIXELS*TILE_PIXELS*4 );
+	if ( !readPng( strSrcFName, &pImgIn ) )
+	{
+		if ( fnMessageFeedback )
+		{
+			fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+				std::string( "failed to merge image [" ) + strSrcFName + std::string( "]" ) );
+			return false;
+		}
+	}
+
+	bool bRes = mergePng( strDstFName, pImgIn, fnMessageFeedback );
+	std::free( pImgIn );
+
+	return bRes;
 }
 
 
@@ -411,7 +449,7 @@ bool WebTileManager::createTilesFromDB()
 
 		if ( std::filesystem::exists( std::filesystem::path( strFName ) ) )
 		{
-			bRes = mergePng( strFName, pImgBuf );
+			bRes = mergePng( strFName, pImgBuf, mfnMessageFeedback );
 		}
 		else
 		{

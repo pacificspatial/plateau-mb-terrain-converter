@@ -30,7 +30,11 @@ public:
 	//inline std::string getDbError() const { return mstrErrorMsg; }
 
 	bool pushPixelInfo( const TILE_PIXEL_INFO &info );
+	void finalizePushing();
 	bool createTilesFromDB();
+
+	static bool mergePng( const std::string& strSrcFName, const std::string& strDstFName,
+		const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback = nullptr );
 #if 0
 	bool createTilesFromFile();
 #endif
@@ -39,9 +43,10 @@ private:
 #if 0
 	bool writePng( const std::string strFName, uint8_t *pImgR, uint8_t *pImgG, uint8_t *pImgB, uint8_t *pImgA );
 #endif
-	bool writePng( const std::string strFName, uint8_t *pImg );
-	bool mergePng( const std::string strFName, uint8_t *pImg );
-	bool readPng( const std::string strFName, uint8_t **pImg );
+	static bool writePng( const std::string &strFName, uint8_t *pImg );
+	static bool mergePng( const std::string &strFName, uint8_t *pImg, 
+		const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback = nullptr );
+	static bool readPng( const std::string strFName, uint8_t **pImg );
 	std::string makeOutputFilePath( const std::filesystem::path pathBase, const int nX, const int nY, const int nZ );
 	bool createDirectoryFromTilePath( const std::filesystem::path pathTileName );
 	bool buildOverviews( std::vector<TILE_COORD> &vBaseTiles );

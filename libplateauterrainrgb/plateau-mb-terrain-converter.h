@@ -57,6 +57,14 @@ public:
 
     void createTileset();
 
+    static void mergeTilesets( 
+        const std::string& strSourceDir1, 
+        const std::string& strSourceDir2, 
+        const std::string& strOutDir, 
+        const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback = nullptr,
+        const std::function<void(int)> &fnProgressFeedback = nullptr 
+        );
+
 private:
     std::string mstrInputTerrainCityGML;
     std::string mstrTileDirectory;
