@@ -8,37 +8,92 @@
 void usage()
 {
 	std::cerr << "convertTerrainToMapboxRGB Usage: " << std::endl;
-	std::cerr << "[input file path(CityGML)] [output directory] [minimum zoom level] [maximum zoom level] [(option) output log filename]" << std::endl;
+	std::cerr << "convertTerrainToMapboxRGB [(options)] [input file path(CityGML)] [output directory]" << std::endl;
+	std::cerr << "options :" << std::endl;
+	std::cerr << "    --min_zoom [zoom no] : minimum zoom level (default = 6)" << std::endl;
+	std::cerr << "    --max_zoom [zoom no] : maximum zoom level (default = 15)" << std::endl;
+	std::cerr << "    --overwrite : overwrite existing tiles" << std::endl;
+	std::cerr << "    --logfile [filename] : specify output log file" << std::endl;
 	exit( 1 );
 }
 
 
 int main( int argc, char* argv[] )
 {
-	if ( argc != 5 && argc != 6 ) usage();
-
+	int nMinZoom = 6;
+	int nMaxZoom = 15;
+	bool bOverwrite = false;
 	std::ofstream ofsLog;
+	std::string strInputFName;
+	std::string strOutputDir;
 
-	int nMinZoom = std::stoi( argv[3] );
-	int nMaxZoom = std::stoi( argv[4] );
 
-	if ( argc == 6 )
+	if ( argc < 3 ) usage();
+
+	for ( int i = 1; i < argc; i++ )
 	{
-		ofsLog.open( argv[5], std::ios_base::app );
-		if ( !ofsLog )
+		if ( std::strcmp( argv[i], "--min_zoom" ) == 0 )
 		{
-			std::cerr << "unable to open log file : [" << argv[5] << "]" << std::endl;
-			std::exit( 1 );
+			nMinZoom = std::stoi( argv[++i] );
+		}
+		else if ( std::strcmp( argv[i], "--max_zoom" ) == 0 )
+		{
+			nMaxZoom = std::stoi( argv[++i] );
+		}
+		else if ( std::strcmp( argv[i], "--overwrite" ) == 0 )
+		{
+			bOverwrite = true;
+		}
+		else if ( std::strcmp( argv[i], "--logfile" ) == 0 )
+		{
+			ofsLog.open( argv[++i], std::ios_base::app );
+			if ( !ofsLog )
+			{
+				std::cerr << "unable to open log file : [" << argv[i-1] << "]" << std::endl;
+			}
+		}
+		else if ( std::strcmp( argv[i], "--help" ) == 0 )
+		{
+			usage();
+		}
+		else if ( strInputFName.empty() )
+		{
+			strInputFName = argv[i];
+		}
+		else if ( strOutputDir.empty() )
+		{
+			strOutputDir = argv[i];
+		}
+		else
+		{
+			std::cerr << "invalid argument or option [" << argv[i] << "]" << std::endl;
+			usage();
 		}
 	}
 
-	std::cout << "[" << argv[1] << "] : process started" << std::endl;
-	ofsLog << "[" << argv[1] << "]" << std::endl;
+	if ( strInputFName.empty() )
+	{
+		std::cerr << "input file is not specified." << std::endl;
+		usage();
+	}
+
+	if ( strOutputDir.empty() )
+	{
+		std::cerr << "output directory is not specified." << std::endl;
+		usage();
+	}
+
+	std::cout << "[" << strInputFName << "] : process started" << std::endl;
+	if ( ofsLog.is_open() )
+	{
+		ofsLog << "[" << strInputFName << "]" << std::endl;
+	}
+
 	auto chronoStart = std::chrono::system_clock::now();
 
 	std::unique_ptr<PlateauMapboxTerrainConverter> converter = 
 		std::make_unique<PlateauMapboxTerrainConverter>( 
-			argv[1], argv[2], nMinZoom, nMaxZoom, 
+			strInputFName, strOutputDir, nMinZoom, nMaxZoom, bOverwrite,
 			[&]( PlateauMapboxTerrainConverter::MESSAGE_STATUS eStatus, const std::string& strMessage ){
 				if ( eStatus == PlateauMapboxTerrainConverter::MESSAGE_ERROR )
 				{
@@ -72,9 +127,10 @@ int main( int argc, char* argv[] )
 	auto chronoEnd = std::chrono::system_clock::now();
 	auto chronoTime = std::chrono::duration_cast<std::chrono::seconds>( chronoEnd - chronoStart );
 	std::cout << "process finished successfully in " << chronoTime.count() << "seconds." << std::endl;
-	if ( ofsLog )
+	if ( ofsLog.is_open() )
 	{
 		ofsLog << "process finished successfully in " << chronoTime.count() << "seconds." << std::endl;
+		ofsLog.close();
 	}
 
 	return 0;

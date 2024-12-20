@@ -29,11 +29,13 @@ WebTileManager::WebTileManager(
 	const std::string& strOutputDirectory,
 	const int nMinZoomLevel,
 	const int nMaxZoomLevel,
+	const bool bOverwrite,
 	const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback,
 	const std::function<void(int)> &fnProgressFeedback
 )
 	:
 	mbValid( false ),
+	mbOverwrite(bOverwrite),
 	mpDb( nullptr ),
 	mpStmt( nullptr ),
 	mnPushCount( 0 ),
@@ -189,16 +191,16 @@ ERROR:
 #if 0
 bool WebTileManager::pushPixelInfo( const TILE_PIXEL_INFO& info )
 {
-	outData data;
-	data.info = info;
+outData data;
+data.info = info;
 
-	mstmOutputBaseTile.write( data.szData, 256 );
+mstmOutputBaseTile.write( data.szData, 256 );
 
-	return true;
+return true;
 }
 
 
-bool WebTileManager::writePng( const std::string strFName, uint8_t *pImgR, uint8_t *pImgG, uint8_t *pImgB, uint8_t *pImgA )
+bool WebTileManager::writePng( const std::string strFName, uint8_t* pImgR, uint8_t* pImgG, uint8_t* pImgB, uint8_t* pImgA )
 {
 	auto poDriver = GetGDALDriverManager()->GetDriverByName( "PNG" );
 	if ( !poDriver )
@@ -230,33 +232,33 @@ bool WebTileManager::writePng( const std::string strFName, uint8_t *pImgR, uint8
 #endif
 
 
-bool WebTileManager::writePng(  const std::string &strFName, uint8_t *pImg )
+bool WebTileManager::writePng( const std::string& strFName, uint8_t* pImg )
 {
 	png_image png;
 
-	std::memset( &png, 0x00, sizeof(png_image) );
+	std::memset( &png, 0x00, sizeof( png_image ) );
 	png.version = PNG_IMAGE_VERSION;
 	png.width = TILE_PIXELS;
 	png.height = TILE_PIXELS;
 	png.format = PNG_FORMAT_RGBA;
 
-	return png_image_write_to_file( &png, strFName.c_str(), 0, pImg, PNG_IMAGE_ROW_STRIDE(png), nullptr ) != 0;
+	return png_image_write_to_file( &png, strFName.c_str(), 0, pImg, PNG_IMAGE_ROW_STRIDE( png ), nullptr ) != 0;
 }
 
 
-bool WebTileManager::mergePng( const std::string &strFName, uint8_t *pImg,
-	const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback )
+bool WebTileManager::mergePng( const std::string& strFName, uint8_t* pImg, bool bOverwrite,
+	const std::function<void( PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string )>& fnMessageFeedback )
 {
 	png_image png;
 	uint32_t nStride, nWidth, nHeight;
-	uint8_t *pBuf;
+	uint8_t* pBuf;
 	bool bRet;
 
-	std::memset( &png, 0x00, sizeof(png_image) );
+	std::memset( &png, 0x00, sizeof( png_image ) );
 	png.version = PNG_IMAGE_VERSION;
 
 	png_image_begin_read_from_file( &png, strFName.c_str() );
-	if ( PNG_IMAGE_FAILED(png) )
+	if ( PNG_IMAGE_FAILED( png ) )
 	{
 		return writePng( strFName, pImg );
 	}
@@ -267,15 +269,15 @@ bool WebTileManager::mergePng( const std::string &strFName, uint8_t *pImg,
 	{
 		if ( fnMessageFeedback )
 		{
-			fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR, 
-								"tile size that will be merged is not 256." );
+			fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+				"tile size that will be merged is not 256." );
 			png_image_free( &png );
 			return false;
 		}
 	}
 
 	nStride = PNG_IMAGE_ROW_STRIDE( png );
-	pBuf = new uint8_t[PNG_IMAGE_BUFFER_SIZE(png, nStride)];
+	pBuf = new uint8_t[PNG_IMAGE_BUFFER_SIZE( png, nStride )];
 	png_image_finish_read( &png, nullptr, pBuf, nStride, nullptr );
 
 	png_image_free( &png );
@@ -283,12 +285,25 @@ bool WebTileManager::mergePng( const std::string &strFName, uint8_t *pImg,
 	// merge
 	for ( int i = 0; i < TILE_PIXELS * TILE_PIXELS * 4; i += 4 )
 	{
-		if ( pBuf[i + 3] == 0 )
+		if ( bOverwrite )
 		{
-			pBuf[i+0] = pImg[i+0];
-			pBuf[i+1] = pImg[i+1];
-			pBuf[i+2] = pImg[i+2];
-			pBuf[i+3] = pImg[i+3];
+			if ( pImg[i+3] != 0 )
+			{
+				pBuf[i+0] = pImg[i+0];
+				pBuf[i+1] = pImg[i+1];
+				pBuf[i+2] = pImg[i+2];
+				pBuf[i+3] = pImg[i+3];
+			}
+		}
+		else
+		{
+			if ( pBuf[i + 3] == 0 )
+			{
+				pBuf[i+0] = pImg[i+0];
+				pBuf[i+1] = pImg[i+1];
+				pBuf[i+2] = pImg[i+2];
+				pBuf[i+3] = pImg[i+3];
+			}
 		}
 	}
 
@@ -300,7 +315,7 @@ bool WebTileManager::mergePng( const std::string &strFName, uint8_t *pImg,
 }
 
 
-bool WebTileManager::mergePng( const std::string& strSrcFName, const std::string& strDstFName, 
+bool WebTileManager::mergePng( const std::string& strSrcFName, const std::string& strDstFName, bool bOverwrite, 
 	const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback )
 {
 	uint8_t *pImgIn = static_cast<uint8_t *>( std::malloc( TILE_PIXELS*TILE_PIXELS*4 ) );
@@ -315,7 +330,7 @@ bool WebTileManager::mergePng( const std::string& strSrcFName, const std::string
 		}
 	}
 
-	bool bRes = mergePng( strDstFName, pImgIn, fnMessageFeedback );
+	bool bRes = mergePng( strDstFName, pImgIn, bOverwrite, fnMessageFeedback );
 	std::free( pImgIn );
 
 	return bRes;
@@ -449,7 +464,7 @@ bool WebTileManager::createTilesFromDB()
 
 		if ( std::filesystem::exists( std::filesystem::path( strFName ) ) )
 		{
-			bRes = mergePng( strFName, pImgBuf, mfnMessageFeedback );
+			bRes = mergePng( strFName, pImgBuf, mbOverwrite, mfnMessageFeedback );
 		}
 		else
 		{

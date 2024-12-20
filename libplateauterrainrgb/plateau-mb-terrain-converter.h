@@ -48,6 +48,7 @@ public:
         const std::string &strOutputTileDirectory, 
         const int nMinZoomLevel, 
         const int nMaxZoomLevel,
+        const bool bOverwrite,
         const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback = nullptr,
         const std::function<void(int)> &fnProgressFeedback = nullptr
     );
@@ -61,6 +62,7 @@ public:
         const std::string& strSourceDir1, 
         const std::string& strSourceDir2, 
         const std::string& strOutDir, 
+        const bool bOverwrite,
         const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback = nullptr,
         const std::function<void(int)> &fnProgressFeedback = nullptr 
         );

@@ -17,6 +17,7 @@ PlateauMapboxTerrainConverter::PlateauMapboxTerrainConverter(
     const std::string& strOutputTileDirectory,
     const int nMinZoomLevel,
     const int nMaxZoomLevel,
+    const bool bOverwrite,
     const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback,
     const std::function<void(int)> &fnProgressFeedback
 )
@@ -29,7 +30,7 @@ PlateauMapboxTerrainConverter::PlateauMapboxTerrainConverter(
     mfnProgressFeedback( fnProgressFeedback ),
     mbValid( false )
 {
-    mpWebTileManager = std::make_unique<WebTileManager>( strOutputTileDirectory, nMinZoomLevel, nMaxZoomLevel, mfnMessageFeedback, mfnProgressFeedback );
+    mpWebTileManager = std::make_unique<WebTileManager>( strOutputTileDirectory, nMinZoomLevel, nMaxZoomLevel, bOverwrite, mfnMessageFeedback, mfnProgressFeedback );
     if ( !mpWebTileManager->isValid() )
     {
         return;
@@ -105,6 +106,7 @@ void PlateauMapboxTerrainConverter::mergeTilesets(
     const std::string& strSourceDir1, 
     const std::string& strSourceDir2, 
     const std::string& strOutDir, 
+    const bool bOverwrite,
     const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback,
     const std::function<void(int)> &fnProgressFeedback 
     )
@@ -162,7 +164,11 @@ void PlateauMapboxTerrainConverter::mergeTilesets(
                             pathDestination /= eY.path().filename();
                             if ( std::filesystem::exists( pathDestination ) )
                             {
-                                WebTileManager::mergePng( eY.path().u8string(), pathDestination.u8string(), fnMessageFeedback );
+                                WebTileManager::mergePng( eY.path().u8string(), pathDestination.u8string(), bOverwrite, fnMessageFeedback );
+                            }
+                            else
+                            {
+                                std::filesystem::copy( eY, pathDestination );
                             }
                         }
                     }

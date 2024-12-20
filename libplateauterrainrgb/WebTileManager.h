@@ -21,6 +21,7 @@ public:
 	WebTileManager( const std::string &strOutputDirectory,
 					const int nMinZoomLevel,
 					const int nMaxZoomLevel,
+					const bool bOverwrite = false,
 					const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback = nullptr,
 					const std::function<void(int)> &fnProgressFeedback = nullptr
 	);
@@ -33,7 +34,7 @@ public:
 	void finalizePushing();
 	bool createTilesFromDB();
 
-	static bool mergePng( const std::string& strSrcFName, const std::string& strDstFName,
+	static bool mergePng( const std::string& strSrcFName, const std::string& strDstFName, bool bOverwrite,
 		const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback = nullptr );
 #if 0
 	bool createTilesFromFile();
@@ -44,7 +45,7 @@ private:
 	bool writePng( const std::string strFName, uint8_t *pImgR, uint8_t *pImgG, uint8_t *pImgB, uint8_t *pImgA );
 #endif
 	static bool writePng( const std::string &strFName, uint8_t *pImg );
-	static bool mergePng( const std::string &strFName, uint8_t *pImg, 
+	static bool mergePng( const std::string &strFName, uint8_t *pImg, bool bOverwrite, 
 		const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback = nullptr );
 	static bool readPng( const std::string strFName, uint8_t **pImg );
 	std::string makeOutputFilePath( const std::filesystem::path pathBase, const int nX, const int nY, const int nZ );
@@ -59,6 +60,7 @@ private:
 	std::vector<TILE_COORD> getOverviewTileList( std::vector<TILE_COORD> &vTileList );
 
 	bool mbValid;
+	bool mbOverwrite;
 
 	int mnMinZoomLevel;
 	int mnMaxZoomLevel;
