@@ -34,7 +34,7 @@ swig_add_library(pyplateauterrainrgb
   SOURCES plateau-mb-terrain-converter.i)
 
 add_library(${PROJECT_NAMESPACE}::pyplateauterrainrgb ALIAS pyplateauterrainrgb)
-target_include_directories(pyplateauterrainrgb PRIVATE ../libplateauterrainrgb ${Python3_INCLUDE_DIRS} ${GDAL_LIBRARY})
+target_include_directories(pyplateauterrainrgb PRIVATE ../libplateauterrainrgb ${Python3_INCLUDE_DIRS})
 set_property(TARGET pyplateauterrainrgb PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES ON)
 
 if(APPLE)
@@ -60,11 +60,5 @@ if(MSVC)
   target_link_libraries(pyplateauterrainrgb PRIVATE ${Python3_LIBRARIES})
 endif()
 
-if (UNIX)
-    set_target_properties(pyplateauterrainrgb 
-	    PROPERTIES INSTALL_RPATH
-	    ${CMAKE_INSTALL_PREFIX}/lib)
-endif()
-
-install(TARGETS pyplateauterrainrgb LIBRARY DESTINATION python)
-install(FILES ${PYTHON_PROJECT_DIR}/pyplateauterrainrgb.py DESTINATION python)
+install(TARGETS pyplateauterrainrgb COMPONENT python DESTINATION ${Python3_SITEARCH}/plateauterrainrgb)
+install(FILES ${PYTHON_PROJECT_DIR}/pyplateauterrainrgb.py DESTINATION ${Python3_SITEARCH}/plateauterrainrgb)

@@ -41,6 +41,24 @@ static void progressCallbackHandler( int nProgress )
 }
 %}
 
+%include "exception.i"
+
+%exception 
+{
+	try
+	{
+		$action
+	}
+	catch (std::range_error &e)
+	{
+		SWIG_exception(SWIG_ValueError, "Range Error");
+	}
+	catch (...)
+	{
+		SWIG_exception(SWIG_RuntimeError, "Unknown exception");
+	}
+}
+
 
 %inline %{
 class PyPlateauMapboxTerrainConverter
@@ -51,6 +69,7 @@ public:
         const std::string &strOutputTileDirectory, 
         const int nMinZoomLevel, 
         const int nMaxZoomLevel,
+        const bool bOverwrite,
 		PMTCFeedback *pFeedback
 	)
 	{
@@ -60,6 +79,7 @@ public:
 			strOutputTileDirectory,
 			nMinZoomLevel,
 			nMaxZoomLevel,
+			bOverwrite,
 			&messageCallbackHandler,
 			&progressCallbackHandler
 		);
@@ -72,12 +92,14 @@ public:
         const std::string& strSourceDir1, 
         const std::string& strSourceDir2, 
         const std::string& strOutDir, 
+        const bool bOverwrite,
 		PMTCFeedback *pFeedback
         )
 	{
 		gpFeedback = pFeedback;
 		PlateauMapboxTerrainConverter::mergeTilesets(
-			strSourceDir1, strSourceDir2, strOutDir, &messageCallbackHandler, &progressCallbackHandler
+			strSourceDir1, strSourceDir2, strOutDir, bOverwrite,
+			&messageCallbackHandler, &progressCallbackHandler
 		);
 	}
 

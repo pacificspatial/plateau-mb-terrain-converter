@@ -22,9 +22,19 @@ if (UNIX)
 	set_target_properties(convertTerrainToMapboxRGB 
 		PROPERTIES INSTALL_RPATH
 		${CMAKE_INSTALL_PREFIX}/lib)
-	# set_target_properties(terrain_tiles2mapbox_rgb 
-	# 	PROPERTIES INSTALL_RPATH
-	# 	${CMAKE_INSTALL_PREFIX}/lib)
+	set_target_properties(merge_tilesets 
+		PROPERTIES INSTALL_RPATH
+	 	${CMAKE_INSTALL_PREFIX}/lib)
+
+	if (APPLE)
+		set_target_properties(convertTerrainToMapboxRGB
+			PROPERTIES
+			INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
+		set_target_properties(merge_tilesets
+			PROPERTIES
+			INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
+		set_target_properties()
+	endif()
 endif()
 
 install(TARGETS convertTerrainToMapboxRGB RUNTIME DESTINATION bin)

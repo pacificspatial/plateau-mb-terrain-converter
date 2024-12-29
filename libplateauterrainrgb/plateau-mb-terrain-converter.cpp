@@ -115,10 +115,15 @@ void PlateauMapboxTerrainConverter::mergeTilesets(
     std::filesystem::path pathSrc2( strSourceDir2 );
     std::filesystem::path pathOutDir( strOutDir );
 
-    std::filesystem::copy( pathSrc1, pathOutDir, std::filesystem::copy_options::recursive );
-
-    std::filesystem::path pathAppendTiles( strSourceDir2 );
-    //std::filesystem::path pathGSITiles( argv[2] );
+    if ( !std::filesystem::exists( strSourceDir1 ) )
+    {
+        if ( fnMessageFeedback )
+        {
+            fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+                std::string( "input PLATEAU tile is not exists " ) + strSourceDir1 );
+            return;
+        }
+    }
 
     if ( !std::filesystem::exists( strSourceDir2 ) )
     {
@@ -130,20 +135,23 @@ void PlateauMapboxTerrainConverter::mergeTilesets(
         }
     }
 
-    //if ( !std::filesystem::exists( pathGSITiles ) )
-    //{
-    //	std::cerr << "input GSI tile is not exists " << argv[1] << std::endl;
-    //	exit( 1 );
-    //}
+    std::filesystem::copy( pathSrc1, pathOutDir, std::filesystem::copy_options::recursive );
 
     std::regex reTileDir( "[0-9]+" );
     for ( const std::filesystem::directory_entry& eZ :
-        std::filesystem::directory_iterator( pathAppendTiles ) )
+        std::filesystem::directory_iterator( pathSrc2 ) )
     {
         if ( eZ.is_directory() && 
             std::regex_match( eZ.path().stem().u8string(), reTileDir ) )
         {
             auto pathZFolder = eZ.path();
+            std::filesystem::path pathDestinationZ = pathOutDir;
+            pathDestinationZ /= eZ.path().stem();
+            if ( !std::filesystem::exists( pathDestinationZ ) )
+            {
+                std::filesystem::copy( pathZFolder, pathDestinationZ, std::filesystem::copy_options::recursive );
+                continue;
+            }
             for ( const std::filesystem::directory_entry& eX :
                 std::filesystem::directory_iterator( pathZFolder ) )
             {
@@ -151,6 +159,14 @@ void PlateauMapboxTerrainConverter::mergeTilesets(
                     std::regex_match( eX.path().stem().u8string(), reTileDir ) )
                 {
                     auto pathXFolder = eX.path();
+                    std::filesystem::path pathDestinationX = pathOutDir;
+                    pathDestinationX /= eZ.path().stem();
+                    pathDestinationX /= eX.path().stem();
+                    if ( !std::filesystem::exists( pathDestinationX ) )
+                    {
+                        std::filesystem::copy( pathXFolder, pathDestinationX, std::filesystem::copy_options::recursive );
+                        continue;
+                    }
                     for ( const std::filesystem::directory_entry& eY :
                         std::filesystem::directory_iterator( pathXFolder ) )
                     {
@@ -158,17 +174,17 @@ void PlateauMapboxTerrainConverter::mergeTilesets(
                             std::regex_match( eY.path().stem().u8string(), reTileDir ) )
                         {
                             //std::cout << "    " << eY.path().stem() << std::endl;
-                            std::filesystem::path pathDestination = pathOutDir;
-                            pathDestination /= eZ.path().stem();
-                            pathDestination /= eX.path().stem();
-                            pathDestination /= eY.path().filename();
-                            if ( std::filesystem::exists( pathDestination ) )
+                            std::filesystem::path pathDestinationY = pathOutDir;
+                            pathDestinationY /= eZ.path().stem();
+                            pathDestinationY /= eX.path().stem();
+                            pathDestinationY /= eY.path().filename();
+                            if ( std::filesystem::exists( pathDestinationY ) )
                             {
-                                WebTileManager::mergePng( eY.path().u8string(), pathDestination.u8string(), bOverwrite, fnMessageFeedback );
+                                WebTileManager::mergePng( eY.path().u8string(), pathDestinationY.u8string(), bOverwrite, fnMessageFeedback );
                             }
                             else
                             {
-                                std::filesystem::copy( eY, pathDestination );
+                                std::filesystem::copy( eY, pathDestinationY );
                             }
                         }
                     }

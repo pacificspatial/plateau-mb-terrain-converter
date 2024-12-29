@@ -3,6 +3,7 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <cstring>
 
 
 void usage()
@@ -118,7 +119,7 @@ int main( int argc, char* argv[] )
 		{
 			converter->createTileset();
 		}
-		catch ( std::domain_error& e )
+		catch ( std::range_error& e )
 		{
 			std::cerr << e.what();
 		}

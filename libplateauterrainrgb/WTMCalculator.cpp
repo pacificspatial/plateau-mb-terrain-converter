@@ -58,7 +58,7 @@ WTM_BBOX WTMCalculator::calcTriangleToWTMBbox( OGRPoint &p1, OGRPoint &p2, OGRPo
 		p3.transform( mTransform ) != OGRERR_NONE
 		)
 	{
-		throw std::domain_error( "Invalid coordinate detected." );
+		throw std::range_error( "Invalid coordinate detected." );
 	}
 
 	double dMinX = std::min( std::min(p1.getX(), p2.getX()), p3.getX() );

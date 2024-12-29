@@ -55,19 +55,16 @@ endif()
 
 add_library(${PROJECT_NAMESPACE}::libplateauterrainrgb ALIAS libplateauterrainrgb)
 
-#if (UNIX)
-#    get_filename_component(PNG_LIBDIRS ${PNG_LIBRARIES} PATH)
-#    set(LIBPMTC_RPATH ${LIBPMTC_RPATH} ${PNG_LIBDIRS})
-#    get_filename_component(SQLite3_LIBDIRS ${SQLite3_LIBRARIES} PATH)
-#    set(LIBPMTC_RPATH ${LIBPMTC_RPATH} ${SQLite3_LIBDIRS})
-#    get_filename_component(GDAL_LIBDIRS ${GDAL_LIBRARY} PATH)
-#    set(LIBPMTC_RPATH ${LIBPMTC_RPATH} ${GDAL_LIBDIRS})
-#    set_target_properties(
-#        plateau-mb-terrain-converter PROPERTIES
-#        INSTALL_RPATH "${LIBPMTC_RPATH}"
-#    )
-#endif()
-
+if (UNIX)
+    set_target_properties(libplateauterrainrgb
+        PROPERTIES INSTALL_RPATH
+        ${CMAKE_INSTALL_PREFIX}/lib)
+    if (APPLE)
+        set_target_properties(libplateauterrainrgb
+                PROPERTIES
+            INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
+    endif()
+endif()
 
 include(GNUInstallDirs)
 

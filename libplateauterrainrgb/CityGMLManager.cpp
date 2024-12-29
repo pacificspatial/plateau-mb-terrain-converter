@@ -19,6 +19,8 @@ CityGMLManager::CityGMLManager(
 {
 	GDALAllRegister();
 	CPLSetConfigOption( "GML_SRS_DIMENSION_IF_MISSING", "3" );
+//	CPLSetConfigOption( "GML_READ_MODE", "SEQUENTIAL_LAYERS" );
+
 	char **papszAllowedDrivers = nullptr;
 
 	papszAllowedDrivers = CSLAddString( papszAllowedDrivers, "GML" );
