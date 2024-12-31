@@ -89,8 +89,7 @@ public:
 	inline bool isValid() const { return mObj->isValid(); }
 
     inline static void mergeTilesets( 
-        const std::string& strSourceDir1, 
-        const std::string& strSourceDir2, 
+        const std::vector<std::string> &vstrInputDirs,
         const std::string& strOutDir, 
         const bool bOverwrite,
 		PMTCFeedback *pFeedback
@@ -98,7 +97,7 @@ public:
 	{
 		gpFeedback = pFeedback;
 		PlateauMapboxTerrainConverter::mergeTilesets(
-			strSourceDir1, strSourceDir2, strOutDir, bOverwrite,
+			vstrInputDirs, strOutDir, bOverwrite,
 			&messageCallbackHandler, &progressCallbackHandler
 		);
 	}

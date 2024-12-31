@@ -33,7 +33,6 @@ if (UNIX)
 		set_target_properties(merge_tilesets
 			PROPERTIES
 			INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
-		set_target_properties()
 	endif()
 endif()
 

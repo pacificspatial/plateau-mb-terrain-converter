@@ -60,8 +60,7 @@ public:
     void createTileset();
 
     static void mergeTilesets( 
-        const std::string& strSourceDir1, 
-        const std::string& strSourceDir2, 
+        const std::vector<std::string> &vstrInputDirs,
         const std::string& strOutDir, 
         const bool bOverwrite,
         const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback = nullptr,

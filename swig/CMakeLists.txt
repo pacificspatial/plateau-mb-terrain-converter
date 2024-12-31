@@ -36,6 +36,7 @@ swig_add_library(pyplateauterrainrgb
 add_library(${PROJECT_NAMESPACE}::pyplateauterrainrgb ALIAS pyplateauterrainrgb)
 target_include_directories(pyplateauterrainrgb PRIVATE ../libplateauterrainrgb ${Python3_INCLUDE_DIRS})
 set_property(TARGET pyplateauterrainrgb PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES ON)
+target_compile_features(pyplateauterrainrgb PRIVATE cxx_std_17)
 
 if(APPLE)
   set_target_properties(pyplateauterrainrgb PROPERTIES

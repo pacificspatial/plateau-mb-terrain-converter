@@ -103,88 +103,93 @@ void PlateauMapboxTerrainConverter::createTileset()
 
 
 void PlateauMapboxTerrainConverter::mergeTilesets( 
-    const std::string& strSourceDir1, 
-    const std::string& strSourceDir2, 
+    const std::vector<std::string> &vstrInputDirs,
     const std::string& strOutDir, 
     const bool bOverwrite,
     const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback,
     const std::function<void(int)> &fnProgressFeedback 
     )
 {
-    std::filesystem::path pathSrc1( strSourceDir1 );
-    std::filesystem::path pathSrc2( strSourceDir2 );
+    std::filesystem::path pathSrc1( vstrInputDirs[0] );
+//    std::filesystem::path pathSrc2( strSourceDir2 );
     std::filesystem::path pathOutDir( strOutDir );
 
-    if ( !std::filesystem::exists( strSourceDir1 ) )
+    if ( !std::filesystem::exists( pathSrc1 ) )
     {
         if ( fnMessageFeedback )
         {
             fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
-                std::string( "input PLATEAU tile is not exists " ) + strSourceDir1 );
+                std::string( "input PLATEAU tile is not exists " ) + pathSrc1.u8string().c_str() );
             return;
         }
     }
 
-    if ( !std::filesystem::exists( strSourceDir2 ) )
-    {
-        if ( fnMessageFeedback )
-        {
-            fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
-                std::string( "input PLATEAU tile is not exists " ) + strSourceDir2 );
-            return;
-        }
-    }
+    //if ( !std::filesystem::exists( strSourceDir2 ) )
+    //{
+    //    if ( fnMessageFeedback )
+    //    {
+    //        fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+    //            std::string( "input PLATEAU tile is not exists " ) + strSourceDir2 );
+    //        return;
+    //    }
+    //}
 
     std::filesystem::copy( pathSrc1, pathOutDir, std::filesystem::copy_options::recursive );
 
     std::regex reTileDir( "[0-9]+" );
-    for ( const std::filesystem::directory_entry& eZ :
-        std::filesystem::directory_iterator( pathSrc2 ) )
+    
+    for ( auto iter = vstrInputDirs.begin() + 1; iter != vstrInputDirs.end(); iter++ )
     {
-        if ( eZ.is_directory() && 
-            std::regex_match( eZ.path().stem().u8string(), reTileDir ) )
+        fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_INFO,
+            std::string( "merge " ) + *iter );
+        for ( const std::filesystem::directory_entry& eZ :
+            std::filesystem::directory_iterator( *iter ) )
         {
-            auto pathZFolder = eZ.path();
-            std::filesystem::path pathDestinationZ = pathOutDir;
-            pathDestinationZ /= eZ.path().stem();
-            if ( !std::filesystem::exists( pathDestinationZ ) )
+            if ( eZ.is_directory() && 
+                std::regex_match( eZ.path().stem().u8string(), reTileDir ) )
             {
-                std::filesystem::copy( pathZFolder, pathDestinationZ, std::filesystem::copy_options::recursive );
-                continue;
-            }
-            for ( const std::filesystem::directory_entry& eX :
-                std::filesystem::directory_iterator( pathZFolder ) )
-            {
-                if ( eX.is_directory() &&
-                    std::regex_match( eX.path().stem().u8string(), reTileDir ) )
+                auto pathZFolder = eZ.path();
+                std::filesystem::path pathDestinationZ = pathOutDir;
+                pathDestinationZ /= eZ.path().stem();
+                if ( !std::filesystem::exists( pathDestinationZ ) )
                 {
-                    auto pathXFolder = eX.path();
-                    std::filesystem::path pathDestinationX = pathOutDir;
-                    pathDestinationX /= eZ.path().stem();
-                    pathDestinationX /= eX.path().stem();
-                    if ( !std::filesystem::exists( pathDestinationX ) )
+                    std::filesystem::copy( pathZFolder, pathDestinationZ, std::filesystem::copy_options::recursive );
+                    continue;
+                }
+                for ( const std::filesystem::directory_entry& eX :
+                    std::filesystem::directory_iterator( pathZFolder ) )
+                {
+                    if ( eX.is_directory() &&
+                        std::regex_match( eX.path().stem().u8string(), reTileDir ) )
                     {
-                        std::filesystem::copy( pathXFolder, pathDestinationX, std::filesystem::copy_options::recursive );
-                        continue;
-                    }
-                    for ( const std::filesystem::directory_entry& eY :
-                        std::filesystem::directory_iterator( pathXFolder ) )
-                    {
-                        if ( eY.is_regular_file() &&
-                            std::regex_match( eY.path().stem().u8string(), reTileDir ) )
+                        auto pathXFolder = eX.path();
+                        std::filesystem::path pathDestinationX = pathOutDir;
+                        pathDestinationX /= eZ.path().stem();
+                        pathDestinationX /= eX.path().stem();
+                        if ( !std::filesystem::exists( pathDestinationX ) )
                         {
-                            //std::cout << "    " << eY.path().stem() << std::endl;
-                            std::filesystem::path pathDestinationY = pathOutDir;
-                            pathDestinationY /= eZ.path().stem();
-                            pathDestinationY /= eX.path().stem();
-                            pathDestinationY /= eY.path().filename();
-                            if ( std::filesystem::exists( pathDestinationY ) )
+                            std::filesystem::copy( pathXFolder, pathDestinationX, std::filesystem::copy_options::recursive );
+                            continue;
+                        }
+                        for ( const std::filesystem::directory_entry& eY :
+                            std::filesystem::directory_iterator( pathXFolder ) )
+                        {
+                            if ( eY.is_regular_file() &&
+                                std::regex_match( eY.path().stem().u8string(), reTileDir ) )
                             {
-                                WebTileManager::mergePng( eY.path().u8string(), pathDestinationY.u8string(), bOverwrite, fnMessageFeedback );
-                            }
-                            else
-                            {
-                                std::filesystem::copy( eY, pathDestinationY );
+                                //std::cout << "    " << eY.path().stem() << std::endl;
+                                std::filesystem::path pathDestinationY = pathOutDir;
+                                pathDestinationY /= eZ.path().stem();
+                                pathDestinationY /= eX.path().stem();
+                                pathDestinationY /= eY.path().filename();
+                                if ( std::filesystem::exists( pathDestinationY ) )
+                                {
+                                    WebTileManager::mergePng( eY.path().u8string(), pathDestinationY.u8string(), bOverwrite, fnMessageFeedback );
+                                }
+                                else
+                                {
+                                    std::filesystem::copy( eY, pathDestinationY );
+                                }
                             }
                         }
                     }
