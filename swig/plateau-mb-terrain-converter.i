@@ -102,6 +102,19 @@ public:
 		);
 	}
 
+	
+    inline static void fill_zero(
+        const std::string &strTileDir,
+		PMTCFeedback *pFeedback
+    )
+	{
+		gpFeedback = pFeedback;
+		PlateauMapboxTerrainConverter::fill_zero( 
+			strTileDir,
+			&messageCallbackHandler, &progressCallbackHandler
+		);
+	}
+
 private:
 	std::unique_ptr<PlateauMapboxTerrainConverter> mObj = nullptr;
 };

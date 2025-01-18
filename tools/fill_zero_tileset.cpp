@@ -16,19 +16,19 @@ int main( int argc, char* argv[] )
 
 	if ( argc < 2 ) usage();
 
-	pathSrc.assign( argv[1] );
-	if ( argc == 3 )
-	{
-		pathOutDir.assign( argv[2] );
-		std::filesystem::copy( pathSrc, pathOutDir, std::filesystem::copy_options::recursive );
-	}
-	else
-	{
-		pathOutDir.assign( argv[1] );
-	}
-
 	try
 	{
+		pathSrc.assign( argv[1] );
+		if ( argc == 3 )
+		{
+			pathOutDir.assign( argv[2] );
+			std::filesystem::copy( pathSrc, pathOutDir, std::filesystem::copy_options::recursive );
+		}
+		else
+		{
+			pathOutDir.assign( argv[1] );
+		}
+
 		PlateauMapboxTerrainConverter::fill_zero( pathOutDir.u8string(),
 			[&]( PlateauMapboxTerrainConverter::MESSAGE_STATUS eStatus, const std::string& strMessage ) {
 				if ( eStatus == PlateauMapboxTerrainConverter::MESSAGE_ERROR )
