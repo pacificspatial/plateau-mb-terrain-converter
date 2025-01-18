@@ -175,7 +175,8 @@ void PlateauMapboxTerrainConverter::mergeTilesets(
                             std::filesystem::directory_iterator( pathXFolder ) )
                         {
                             if ( eY.is_regular_file() &&
-                                std::regex_match( eY.path().stem().u8string(), reTileDir ) )
+                                std::regex_match( eY.path().stem().u8string(), reTileDir ) &&
+                                eY.path().extension().u8string() == ".png" )
                             {
                                 //std::cout << "    " << eY.path().stem() << std::endl;
                                 std::filesystem::path pathDestinationY = pathOutDir;
@@ -195,6 +196,43 @@ void PlateauMapboxTerrainConverter::mergeTilesets(
                     }
                 }
             }
+        }
+    }
+}
+
+void PlateauMapboxTerrainConverter::fill_zero(
+    const std::string &strTileDir,
+    const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback,
+    const std::function<void(int)> &fnProgressFeedback 
+)
+{
+    std::filesystem::path pathDir( strTileDir );
+    if ( !std::filesystem::exists( pathDir ) )
+    {
+        if ( fnMessageFeedback )
+        {
+            fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+                std::string( "input PLATEAU tile is not exists " ) + pathDir.u8string().c_str() );
+            return;
+        }
+    }
+
+
+    std::regex reTileDir( "[0-9]+" );
+
+    int i = 0;
+    for ( const std::filesystem::directory_entry& e :
+        std::filesystem::recursive_directory_iterator( pathDir ) )
+    {
+        if ( e.is_regular_file() && 
+            std::regex_match( e.path().stem().u8string(), reTileDir ) )
+        {
+            if ( !WebTileManager::fill_zeroPng( e.path().u8string() ) )
+            {
+                fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+                    "failed to read/write image" + e.path().u8string() );
+            }
+            fnProgressFeedback( ++i );
         }
     }
 }

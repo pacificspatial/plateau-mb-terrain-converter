@@ -36,6 +36,7 @@ public:
 
 	static bool mergePng( const std::string& strSrcFName, const std::string& strDstFName, bool bOverwrite,
 		const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback = nullptr );
+	static bool fill_zeroPng( const std::string& strFName );
 #if 0
 	bool createTilesFromFile();
 #endif

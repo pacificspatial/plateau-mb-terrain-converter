@@ -337,6 +337,46 @@ bool WebTileManager::mergePng( const std::string& strSrcFName, const std::string
 }
 
 
+bool WebTileManager::fill_zeroPng( const std::string& strFName )
+{
+	bool bNullExists = false;
+	uint8_t* pImgIn;
+
+	if ( !readPng( strFName, &pImgIn ) )
+	{
+		return false;
+	}
+
+	for ( int i = 0; i < TILE_PIXELS*TILE_PIXELS*4; i += 4 )
+	{
+		if ( pImgIn[i+3] == 0 )
+		{
+			pImgIn[i+0] = 1;
+			pImgIn[i+1] = 134;
+			pImgIn[i+2] = 160;
+			pImgIn[i+3] = 255;
+
+			if ( !bNullExists )
+			{
+				bNullExists = true;
+			}
+		}
+	}
+
+	if ( bNullExists )
+	{
+		if ( !writePng( strFName, pImgIn ) )
+		{
+			std::free( pImgIn );
+			return false;
+		}
+	}
+
+	std::free( pImgIn );
+	return true;
+}
+
+
 #if 0
 bool WebTileManager::createTilesFromDB()
 {
@@ -777,7 +817,7 @@ bool WebTileManager::createOverviewTileFromQuadTiles(
 bool WebTileManager::readPng( const std::string strFName, uint8_t** pImg )
 {
 	png_image png;
-	std::memset( &png, 0x00, sizeof(png_image ) );
+	std::memset( &png, 0x00, sizeof(png_image) );
 	png.version = PNG_IMAGE_VERSION;
 
 	png_image_begin_read_from_file( &png, strFName.c_str() );

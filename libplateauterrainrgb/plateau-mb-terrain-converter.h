@@ -67,6 +67,12 @@ public:
         const std::function<void(int)> &fnProgressFeedback = nullptr 
         );
 
+    static void fill_zero(
+        const std::string &strTileDir,
+        const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback = nullptr,
+        const std::function<void(int)> &fnProgressFeedback = nullptr 
+    );
+
 private:
     std::string mstrInputTerrainCityGML;
     std::string mstrTileDirectory;

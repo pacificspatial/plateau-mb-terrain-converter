@@ -11,7 +11,7 @@ void usage()
 	std::cerr << "options :" << std::endl;
 	std::cerr << "    --outdir [directory] : output directory" << std::endl;
 	std::cerr << "    --overwrite : overwrite existing tiles" << std::endl;
-	exit( 1 );
+	std::exit( 1 );
 }
 
 
@@ -50,18 +50,18 @@ int main( int argc, char* argv[] )
 		PlateauMapboxTerrainConverter::mergeTilesets(
 			vstrInputDirs, strOutDir, bOverwrite,
 			[&]( PlateauMapboxTerrainConverter::MESSAGE_STATUS eStatus, const std::string& strMessage ) {
-			if ( eStatus == PlateauMapboxTerrainConverter::MESSAGE_ERROR )
-			{
-				std::cerr << "ERROR : " << strMessage << std::endl;
-			}
-			else
-			{
-				std::cout << strMessage << std::endl;
-			}
-		},
+				if ( eStatus == PlateauMapboxTerrainConverter::MESSAGE_ERROR )
+				{
+					std::cerr << "ERROR : " << strMessage << std::endl;
+				}
+				else
+				{
+					std::cout << strMessage << std::endl;
+				}
+			},
 			[]( int nProgress ) {
-			std::cout << nProgress << '\r' << std::flush;
-		}
+				std::cout << nProgress << '\r' << std::flush;
+			}
 		);
 	}
 	catch ( std::filesystem::filesystem_error &e )
