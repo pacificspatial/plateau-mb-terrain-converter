@@ -7,6 +7,12 @@
 #include <vector>
 
 
+#define WTM_MIN_X -20037508.342789244
+#define WTM_MAX_Y 20037508.342789244
+#define WTM_WIDTH 40075016.685578488
+#define WTM_HEIGHT 40075016.685578488
+
+
 class WTMCalculator
 {
 public:
@@ -28,18 +34,20 @@ public:
 
 	//inline void setSourceEPSG( int nEpsg ){ mnSourceEpsg = nEpsg; }
 	inline void setTilePixelSize( uint32_t nPixels ){ mnTilePixels = nPixels; }
+	TILE_PIXEL_INFO calcTilePixelCoordFromTotalPixelCoord( PIXEL_COORD cPixCoord );
+	PIXEL_INFO calcPix( double dZ );
+
+	void transformLatLonToWTM( OGRPoint &pnt );
 
 protected:
 	void prepareTransformer();
 
 	PIXEL_COORD calcTotalPixelCoord( OGRPoint cCoord );
-	TILE_PIXEL_INFO calcTilePixelCoordFromTotalPixelCoord( PIXEL_COORD cPixCoord );
 	void setZoomLevel( uint32_t nZoom, uint32_t nPixels );
 	WTM_BBOX calcTriangleToWTMBbox( OGRPoint &p1, OGRPoint &p2, OGRPoint &p3 );
 
 	static int clcw( const OGRPoint &p1, const OGRPoint &p2, const OGRPoint &p3 );
 	static double calcZ( OGRPoint &&p, const OGRPoint &tp1, const OGRPoint &tp2, const OGRPoint &tp3 );
-	PIXEL_INFO calcPix( double dZ );
 
 	OGRSpatialReference mSourceEpsg;
 	uint32_t mnZoomLevel;

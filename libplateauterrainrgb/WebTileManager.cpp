@@ -11,18 +11,6 @@
 #include <cstring>
 
 
-#define ERRORCHECK(f) \
-  if ( f != SQLITE_OK ) goto ERROR;
-#define TRANSACTION_CHUNC 10000
-
-
-union outData
-{
-	char szData[256];
-	TILE_PIXEL_INFO info;
-};
-
-
 
 
 WebTileManager::WebTileManager(
@@ -30,176 +18,26 @@ WebTileManager::WebTileManager(
 	const int nMinZoomLevel,
 	const int nMaxZoomLevel,
 	const bool bOverwrite,
-	const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback,
+	const std::function<void(MESSAGE_STATUS, std::string)> &fnMessageFeedback,
 	const std::function<void(int)> &fnProgressFeedback
 )
 	:
 	mbValid( false ),
 	mbOverwrite(bOverwrite),
-	mpDb( nullptr ),
-	mpStmt( nullptr ),
-	mnPushCount( 0 ),
 	mpathOutputDirectory( strOutputDirectory ),
 	mnMinZoomLevel( nMinZoomLevel ),
 	mnMaxZoomLevel( nMaxZoomLevel ),
 	mfnMessageFeedback( fnMessageFeedback ),
 	mfnProgressFeedback( fnProgressFeedback )
 {
-	if ( !std::filesystem::exists( mpathOutputDirectory ) )
-	{
-		if ( mfnMessageFeedback )
-		{
-			mfnMessageFeedback( 
-				PlateauMapboxTerrainConverter::MESSAGE_WARNING,
-				"output directory does not exist [ " + mpathOutputDirectory.u8string() + " ]." );
-		}
-	}
-
-	if ( !std::filesystem::is_directory( mpathOutputDirectory ) )
-	{
-		if ( mfnMessageFeedback )
-		{
-			mfnMessageFeedback( 
-				PlateauMapboxTerrainConverter::MESSAGE_ERROR,
-				"output is not a directory [ " + mpathOutputDirectory.u8string() + " ]." );
-		}
-		return;
-	}
-
-	if ( mnMinZoomLevel < 0 || mnMaxZoomLevel < 0 ||
-		 ( mnMinZoomLevel > mnMaxZoomLevel )
-		 )
-	{
-		mfnMessageFeedback(
-			PlateauMapboxTerrainConverter::MESSAGE_ERROR,
-			"Invalid zoom level : " + std::to_string(mnMinZoomLevel) + " - " + std::to_string(mnMaxZoomLevel) );
-		return;
-	}
-
-	if ( mnMaxZoomLevel >= 18 )
-	{
-		mfnMessageFeedback(
-			PlateauMapboxTerrainConverter::MESSAGE_WARNING,
-			"Zoom levels above 18 can result in too many files being generated."
-		);
-	}
-	
-	std::filesystem::path pathDB = mpathOutputDirectory;
-	pathDB /= "tempdb.sqlite";
-	if ( std::filesystem::exists( pathDB ) )
-	{
-		std::filesystem::remove( pathDB );
-	}
-
-#if 0
-	std::filesystem::path pathBaseOutput = mpathOutputDirectory;
-	pathBaseOutput /= "basetile.bin";
-	mstmOutputBaseTile.open( pathBaseOutput, std::ios::binary );
-#endif
-
-	ERRORCHECK( sqlite3_open_v2( pathDB.u8string().c_str(), &mpDb,
-		 SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr ) );
-
-	ERRORCHECK( sqlite3_exec( 
-		mpDb, 
-		"create table plist( tile_x integer, tile_y integer, tile_z integer, pixel_u integer, pixel_v integer, r integer, g integer, b integer, a integer )",
-		nullptr, nullptr, nullptr ) );
-
-	ERRORCHECK( sqlite3_prepare_v2( mpDb, "insert into plist values( ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", -1, &mpStmt, nullptr ) );
-
-	mbValid = true;
-	return;
-
-ERROR:
-	if ( mfnMessageFeedback )
-	{
-		mfnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR, 
-							sqlite3_errstr( sqlite3_errcode(mpDb) ) );
-	}
 }
 
 
 WebTileManager::~WebTileManager()
 {
-	if ( mpDb )
-	{
-		std::filesystem::path pathDB = sqlite3_db_filename( mpDb, NULL );
-		sqlite3_close_v2( mpDb );
-		if ( std::filesystem::exists( pathDB ) )
-		{
-			std::filesystem::remove( pathDB );
-		}
-	}
 }
-
-
-bool WebTileManager::pushPixelInfo( const TILE_PIXEL_INFO& info )
-{
-	sqlite3_reset( mpStmt );
-	if ( !(mnPushCount % TRANSACTION_CHUNC) )
-	{
-		ERRORCHECK( sqlite3_exec( mpDb, "begin transaction", nullptr, nullptr, nullptr ) );
-	}
-	//auto nRes =  sqlite3_bind_int( mpStmt, 1, info.tileNum.nX);
-	ERRORCHECK( sqlite3_bind_int( mpStmt, 1, info.tileNum.nX) );
-	ERRORCHECK( sqlite3_bind_int( mpStmt, 2, info.tileNum.nY) );
-	ERRORCHECK( sqlite3_bind_int( mpStmt, 3, info.tileNum.nZ) );
-	ERRORCHECK( sqlite3_bind_int64( mpStmt, 4, info.pixCoord.nU) );
-	ERRORCHECK( sqlite3_bind_int64( mpStmt, 5, info.pixCoord.nV) );
-	ERRORCHECK( sqlite3_bind_int( mpStmt, 6, info.pixValues.nR) );
-	ERRORCHECK( sqlite3_bind_int( mpStmt, 7, info.pixValues.nG) );
-	ERRORCHECK( sqlite3_bind_int( mpStmt, 8, info.pixValues.nB) );
-	ERRORCHECK( sqlite3_bind_int( mpStmt, 9, info.pixValues.nA) );
-
-	if ( sqlite3_step( mpStmt) != SQLITE_DONE ) goto ERROR;
-
-	mnPushCount++;
-
-	if ( mnPushCount >= TRANSACTION_CHUNC )
-	{
-		ERRORCHECK( sqlite3_exec( mpDb, "commit", nullptr, nullptr, nullptr ) );
-		mnPushCount = 0;
-	}
-
-	return true;
-
-ERROR:
-	if ( mfnMessageFeedback )
-	{
-		mfnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR, 
-							sqlite3_errstr( sqlite3_errcode(mpDb) ) );
-	}
-	sqlite3_finalize( mpStmt );
-	return false;
-}
-
-
-void WebTileManager::finalizePushing()
-{
-	ERRORCHECK( sqlite3_exec( mpDb, "commit", nullptr, nullptr, nullptr ) );
-
-ERROR:
-	if ( mfnMessageFeedback )
-	{
-		mfnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
-			sqlite3_errstr( sqlite3_errcode( mpDb ) ) );
-	}
-	sqlite3_finalize( mpStmt );
-}
-
 
 #if 0
-bool WebTileManager::pushPixelInfo( const TILE_PIXEL_INFO& info )
-{
-outData data;
-data.info = info;
-
-mstmOutputBaseTile.write( data.szData, 256 );
-
-return true;
-}
-
-
 bool WebTileManager::writePng( const std::string strFName, uint8_t* pImgR, uint8_t* pImgG, uint8_t* pImgB, uint8_t* pImgA )
 {
 	auto poDriver = GetGDALDriverManager()->GetDriverByName( "PNG" );
@@ -247,7 +85,7 @@ bool WebTileManager::writePng( const std::string& strFName, uint8_t* pImg )
 
 
 bool WebTileManager::mergePng( const std::string& strFName, uint8_t* pImg, bool bOverwrite,
-	const std::function<void( PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string )>& fnMessageFeedback )
+	const std::function<void( MESSAGE_STATUS, std::string )>& fnMessageFeedback )
 {
 	png_image png;
 	uint32_t nStride, nWidth, nHeight;
@@ -269,7 +107,7 @@ bool WebTileManager::mergePng( const std::string& strFName, uint8_t* pImg, bool 
 	{
 		if ( fnMessageFeedback )
 		{
-			fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+			fnMessageFeedback( MESSAGE_ERROR,
 				"tile size that will be merged is not 256." );
 			png_image_free( &png );
 			return false;
@@ -316,7 +154,7 @@ bool WebTileManager::mergePng( const std::string& strFName, uint8_t* pImg, bool 
 
 
 bool WebTileManager::mergePng( const std::string& strSrcFName, const std::string& strDstFName, bool bOverwrite, 
-	const std::function<void(PlateauMapboxTerrainConverter::MESSAGE_STATUS, std::string)> &fnMessageFeedback )
+	const std::function<void(MESSAGE_STATUS, std::string)> &fnMessageFeedback )
 {
 	uint8_t *pImgIn = static_cast<uint8_t *>( std::malloc( TILE_PIXELS*TILE_PIXELS*4 ) );
 	std::memset( pImgIn, 0x00, TILE_PIXELS*TILE_PIXELS*4 );
@@ -324,7 +162,7 @@ bool WebTileManager::mergePng( const std::string& strSrcFName, const std::string
 	{
 		if ( fnMessageFeedback )
 		{
-			fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+			fnMessageFeedback( MESSAGE_ERROR,
 				std::string( "failed to merge image [" ) + strSrcFName + std::string( "]" ) );
 			return false;
 		}
@@ -448,94 +286,6 @@ bool WebTileManager::createTilesFromFile()
 }
 #endif
 
-bool WebTileManager::createTilesFromDB()
-{
-	std::vector<TILE_COORD> vTiles;
-	sqlite3_stmt *pStmt;
-	std::filesystem::path pathDB = sqlite3_db_filename( mpDb, NULL );
-	uint8_t *pImgBuf;
-	int nProcessedTiles = 0;
-	bool bRes;
-
-	if ( mfnMessageFeedback )
-	{
-		mfnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_INFO, "creating base tiles... " );
-	}
-
-	ERRORCHECK( sqlite3_prepare_v2( mpDb, "select distinct tile_x, tile_y, tile_z from plist;", -1, &pStmt, nullptr ) );
-	while ( sqlite3_step( pStmt ) != SQLITE_DONE )
-	{
-		TILE_COORD tile;
-		tile.nX = sqlite3_column_int( pStmt, 0 );
-		tile.nY = sqlite3_column_int( pStmt, 1 );
-		tile.nZ = sqlite3_column_int( pStmt, 2 );
-		vTiles.push_back( tile );
-	}
-	sqlite3_finalize( pStmt );
-
-	pImgBuf = static_cast<uint8_t *>( CPLCalloc( TILE_PIXELS*TILE_PIXELS*4, 1 ) );
-
-	ERRORCHECK( sqlite3_prepare_v2( mpDb, "select pixel_u,pixel_v,r,g,b,a from plist where tile_x=?1 and tile_y=?2 and tile_z=?3", -1, &pStmt, nullptr ) );
-	for ( auto &t : vTiles )
-	{
-		sqlite3_bind_int( pStmt, 1, t.nX );
-		sqlite3_bind_int( pStmt, 2, t.nY );
-		sqlite3_bind_int( pStmt, 3, t.nZ );
-		while ( sqlite3_step( pStmt ) != SQLITE_DONE )
-		{
-			int nU = sqlite3_column_int( pStmt, 0 );
-			int nV = sqlite3_column_int( pStmt, 1 );
-			uint8_t bR = static_cast<uint8_t>( sqlite3_column_int( pStmt, 2 ) );
-			uint8_t bG = static_cast<uint8_t>( sqlite3_column_int( pStmt, 3 ) );
-			uint8_t bB = static_cast<uint8_t>( sqlite3_column_int( pStmt, 4 ) );
-			uint8_t bA = static_cast<uint8_t>( sqlite3_column_int( pStmt, 5 ) );
-			pImgBuf[nV*TILE_PIXELS*4 + nU*4 + 0] = bR;
-			pImgBuf[nV*TILE_PIXELS*4 + nU*4 + 1] = bG;
-			pImgBuf[nV*TILE_PIXELS*4 + nU*4 + 2] = bB;
-			pImgBuf[nV*TILE_PIXELS*4 + nU*4 + 3] = bA;
-		}
-		auto strFName = makeOutputFilePath( mpathOutputDirectory, t.nX, t.nY, t.nZ );
-		if ( !createDirectoryFromTilePath( std::filesystem::path(strFName) ) )
-		{
-			CPLFree( pImgBuf );
-			sqlite3_finalize( pStmt );
-			return false;
-		}
-
-		if ( std::filesystem::exists( std::filesystem::path( strFName ) ) )
-		{
-			bRes = mergePng( strFName, pImgBuf, mbOverwrite, mfnMessageFeedback );
-		}
-		else
-		{
-			bRes = writePng( strFName, pImgBuf );
-		}
-
-		sqlite3_reset( pStmt );
-		std::memset( pImgBuf, 0x00, TILE_PIXELS*TILE_PIXELS*4 );
-		if ( mfnProgressFeedback )
-		{
-			mfnProgressFeedback( nProcessedTiles++ );
-		}
-	}
-	CPLFree( pImgBuf );
-	sqlite3_finalize( pStmt );
-
-	buildOverviews( vTiles );
-
-	return bRes;
-
-ERROR:
-	if ( mfnMessageFeedback )
-	{
-		mfnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR, 
-							sqlite3_errstr( sqlite3_errcode(mpDb) ) );
-	}
-	sqlite3_finalize( mpStmt );
-
-	return false;
-}
-
 
 std::vector<TILE_COORD> WebTileManager::getOverviewTileList( std::vector<TILE_COORD>& vTileList )
 {
@@ -588,7 +338,7 @@ bool WebTileManager::buildOverviews( std::vector<TILE_COORD> &vBaseTiles )
 		if ( mfnMessageFeedback )
 		{
 			mfnMessageFeedback( 
-				PlateauMapboxTerrainConverter::MESSAGE_INFO, 
+				MESSAGE_INFO, 
 				"creating zoom level " + std::to_string(nCurrentZoomLevel) + " tiles ..." );
 		}
 
@@ -642,7 +392,7 @@ bool WebTileManager::createDirectoryFromTilePath( const std::filesystem::path pa
 			if ( mfnMessageFeedback )
 			{
 				mfnMessageFeedback( 
-					PlateauMapboxTerrainConverter::MESSAGE_ERROR,									 
+					MESSAGE_ERROR,									 
 					"unable to create directory : " + pathZ.u8string() );
 			}
 			return false;
@@ -657,7 +407,7 @@ bool WebTileManager::createDirectoryFromTilePath( const std::filesystem::path pa
 			if ( mfnMessageFeedback )
 			{
 				mfnMessageFeedback( 
-					PlateauMapboxTerrainConverter::MESSAGE_ERROR, 
+					MESSAGE_ERROR, 
 					"unable to create directory : " + pathX.u8string() );
 			}
 			return false;

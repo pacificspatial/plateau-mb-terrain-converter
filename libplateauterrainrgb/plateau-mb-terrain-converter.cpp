@@ -3,55 +3,52 @@
 
 #include "plateau-mb-terrain-converter.h"
 #include "WTMCalculator.h"
-#include "CityGMLManager.h"
-#include "WebTileManager.h"
+#include "CityGMLReader.h"
+#include "GsiTileManager.h"
+#include "GsiGmlReader.h"
+#include "PlateauTileManager.h"
 
 #include <gdal_priv.h>
 #include <stdexcept>
 #include <filesystem>
 #include <regex>
 
+using namespace pmtc;
 
-PlateauMapboxTerrainConverter::PlateauMapboxTerrainConverter(
-    const std::string& strInputTerrainCityGML,
-    const std::string& strOutputTileDirectory,
-    const int nMinZoomLevel,
+bool pmtc::createPlateauTileset(
+    const std::string &strInputTerrainCityGML, 
+    const std::string &strOutputTileDirectory, 
+    const int nMinZoomLevel, 
     const int nMaxZoomLevel,
     const bool bOverwrite,
     const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback,
     const std::function<void(int)> &fnProgressFeedback
 )
-    : 
-    mstrInputTerrainCityGML( strInputTerrainCityGML ),
-    mstrTileDirectory( strOutputTileDirectory ),
-    mnMinZoomLevel( nMinZoomLevel ),
-    mnMaxZoomLevel( nMaxZoomLevel ),
-    mfnMessageFeedback( fnMessageFeedback ),
-    mfnProgressFeedback( fnProgressFeedback ),
-    mbValid( false )
 {
-    mpWebTileManager = std::make_unique<WebTileManager>( strOutputTileDirectory, nMinZoomLevel, nMaxZoomLevel, bOverwrite, mfnMessageFeedback, mfnProgressFeedback );
-    if ( !mpWebTileManager->isValid() )
+    std::unique_ptr<WTMCalculator> pWTMCalculator;
+
+    auto pWebTileManager = std::make_unique<PlateauTileManager>( strOutputTileDirectory, nMinZoomLevel, nMaxZoomLevel, bOverwrite, fnMessageFeedback, fnProgressFeedback );
+    if ( !pWebTileManager->isValid() )
     {
-        return;
+        return false;
     }
 
-    if ( mfnMessageFeedback )
+    if ( fnMessageFeedback )
     {
-        mfnMessageFeedback( MESSAGE_INFO, "reading CityGML ..." );
+        fnMessageFeedback( MESSAGE_INFO, "reading CityGML ..." );
     }
-    mpCityGMLManager = std::make_unique<CityGMLManager>( strInputTerrainCityGML );
-    if ( !mpCityGMLManager->isValid() )
+    auto pCityGMLManager = std::make_unique<CityGMLReader>( strInputTerrainCityGML );
+    if ( !pCityGMLManager->isValid() )
     {
-        mfnMessageFeedback( MESSAGE_ERROR, mpCityGMLManager->getLastError() );
-        return;
+        fnMessageFeedback( MESSAGE_ERROR, pCityGMLManager->getLastError() );
+        return false;
     }
 
-    auto pInputSpatialRef = mpCityGMLManager->getSpatialRef();
+    auto pInputSpatialRef = pCityGMLManager->getSpatialRef();
     if ( pInputSpatialRef )
     {
-//        mpWTMCalculator = std::make_unique<WTMCalculator>( pInputSpatialRef->GetEPSGGeogCS(), TILE_PIXELS, mnMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
-        mpWTMCalculator = std::make_unique<WTMCalculator>( pInputSpatialRef, TILE_PIXELS, mnMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
+        //        mpWTMCalculator = std::make_unique<WTMCalculator>( pInputSpatialRef->GetEPSGGeogCS(), TILE_PIXELS, mnMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
+        pWTMCalculator = std::make_unique<WTMCalculator>( pInputSpatialRef, TILE_PIXELS, nMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
     }
     else
     {
@@ -61,48 +58,100 @@ PlateauMapboxTerrainConverter::PlateauMapboxTerrainConverter(
         oSrs.SetAxisMappingStrategy( OAMS_TRADITIONAL_GIS_ORDER );
         //oSrs.SetDataAxisToSRSAxisMapping( {1, 0} );
 
-        mpWTMCalculator = std::make_unique<WTMCalculator>( &oSrs, TILE_PIXELS, mnMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
+        pWTMCalculator = std::make_unique<WTMCalculator>( &oSrs, TILE_PIXELS, nMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
     }
 
-    mbValid = true;
-}
-
-
-PlateauMapboxTerrainConverter::~PlateauMapboxTerrainConverter()
-{
-}
-
-
-void PlateauMapboxTerrainConverter::createTileset()
-{
+///----------------------------------------
     OGRPoint p1, p2, p3;
 
-    if ( mfnMessageFeedback )
+    if ( fnMessageFeedback )
     {
-        mfnMessageFeedback( MESSAGE_INFO, "calculating grid height in triangles ..." );
+        fnMessageFeedback( MESSAGE_INFO, "calculating grid height in triangles ..." );
     }
 
     int nProcessedTriangle = 0;
-    while ( mpCityGMLManager->getNextTriangle( p1, p2, p3 ) )
+    while ( pCityGMLManager->getNextTriangle( p1, p2, p3 ) )
     {
-        auto vGridInfo = mpWTMCalculator->getGridInTriangle( p1, p2, p3 );
+        auto vGridInfo = pWTMCalculator->getGridInTriangle( p1, p2, p3 );
         for ( auto& pix : vGridInfo )
         {
-            mpWebTileManager->pushPixelInfo( pix );
+            pWebTileManager->pushPixelInfo( pix );
         }
-        if ( mfnProgressFeedback )
+        if ( fnProgressFeedback )
         {
-            mfnProgressFeedback( nProcessedTriangle++ );
+            fnProgressFeedback( nProcessedTriangle++ );
         }
     }
 
-    mpWebTileManager->finalizePushing();
+    pWebTileManager->finalizePushing();
 
-    mpWebTileManager->createTilesFromDB();
+    pWebTileManager->createTilesFromDB();
 }
 
 
-void PlateauMapboxTerrainConverter::mergeTilesets( 
+bool pmtc::createGsiTileset(
+    const std::string& strInputGsiGml,
+    const std::string& strOutputTileDirectory,
+    const int nMinZoomLevel,
+    const int nMaxZoomLevel,
+    const bool bOverwrite,
+    const std::function<void( MESSAGE_STATUS, const std::string& )>& fnMessageFeedback,
+    const std::function<void( int )>& fnProgressFeedback
+)
+{
+    WTM_BBOX bbox;
+    int nWidth, nHeight;
+    double *pData;
+
+    std::unique_ptr<GsiTileManager> tileManager = 
+        std::make_unique<GsiTileManager>(
+            strOutputTileDirectory, nMinZoomLevel, nMaxZoomLevel, bOverwrite,
+            []( MESSAGE_STATUS eStatus, const std::string& strMessage ){
+                if ( eStatus == MESSAGE_ERROR )
+                {
+                    std::cerr << "ERROR : " << strMessage << std::endl;
+                }
+                else
+                {
+                    std::cout << strMessage << std::endl;
+                }
+            },
+            []( int nProgress ){
+                std::cout << nProgress << '\r' << std::flush;
+            }
+        );
+    if ( !tileManager->isValid() )
+    {
+        return false;
+    }
+
+    OGRSpatialReference oSrs;
+    oSrs.importFromEPSG( 4612 );
+    oSrs.SetAxisMappingStrategy( OAMS_TRADITIONAL_GIS_ORDER );
+    auto calculator = std::make_shared<WTMCalculator>( &oSrs, TILE_PIXELS, nMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
+
+    std::shared_ptr<GsiGmlReader> gsi = std::make_shared<GsiGmlReader>( strInputGsiGml );
+    if ( !gsi->isValid() )
+    {
+        fnMessageFeedback( MESSAGE_ERROR, gsi->getErrorMsg() );
+        return false;
+    }
+
+    gsi->getImage( &bbox, &nWidth, &nHeight, &pData );
+    bool bRes = tileManager->createBaseTilesFromImage(
+        bbox, nWidth, nHeight, pData, calculator
+    );
+    if ( !bRes )
+    {
+        fnMessageFeedback( MESSAGE_ERROR, "error occured at image creation." );
+        return false;
+    }
+
+    tileManager->createOverviews();
+}
+
+
+void pmtc::mergeTilesets( 
     const std::vector<std::string> &vstrInputDirs,
     const std::string& strOutDir, 
     const bool bOverwrite,
@@ -118,7 +167,7 @@ void PlateauMapboxTerrainConverter::mergeTilesets(
     {
         if ( fnMessageFeedback )
         {
-            fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+            fnMessageFeedback( MESSAGE_ERROR,
                 std::string( "input PLATEAU tile is not exists " ) + pathSrc1.u8string().c_str() );
             return;
         }
@@ -140,7 +189,7 @@ void PlateauMapboxTerrainConverter::mergeTilesets(
     
     for ( auto iter = vstrInputDirs.begin() + 1; iter != vstrInputDirs.end(); iter++ )
     {
-        fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_INFO,
+        fnMessageFeedback( MESSAGE_INFO,
             std::string( "merge " ) + *iter );
         for ( const std::filesystem::directory_entry& eZ :
             std::filesystem::directory_iterator( *iter ) )
@@ -200,7 +249,7 @@ void PlateauMapboxTerrainConverter::mergeTilesets(
     }
 }
 
-void PlateauMapboxTerrainConverter::fill_zero(
+void pmtc::fill_zero(
     const std::string &strTileDir,
     const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback,
     const std::function<void(int)> &fnProgressFeedback 
@@ -211,7 +260,7 @@ void PlateauMapboxTerrainConverter::fill_zero(
     {
         if ( fnMessageFeedback )
         {
-            fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+            fnMessageFeedback( MESSAGE_ERROR,
                 std::string( "input PLATEAU tile is not exists " ) + pathDir.u8string().c_str() );
             return;
         }
@@ -229,7 +278,7 @@ void PlateauMapboxTerrainConverter::fill_zero(
         {
             if ( !WebTileManager::fill_zeroPng( e.path().u8string() ) )
             {
-                fnMessageFeedback( PlateauMapboxTerrainConverter::MESSAGE_ERROR,
+                fnMessageFeedback( MESSAGE_ERROR,
                     "failed to read/write image" + e.path().u8string() );
             }
             fnProgressFeedback( ++i );

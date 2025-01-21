@@ -5,12 +5,6 @@
 #include <iomanip>
 #include <stdexcept>
 
-
-#define WTM_MIN_X -20037508.342789244
-#define WTM_MAX_Y 20037508.342789244
-#define WTM_WIDTH 40075016.685578488
-#define WTM_HEIGHT 40075016.685578488
-
 #define ULONGLONG unsigned long long
 
 
@@ -47,6 +41,15 @@ void WTMCalculator::prepareTransformer()
 	//std::cout << pszWkt << std::endl;
 	//CPLFree( pszWkt );
 	mTransform = OGRCreateCoordinateTransformation( &mSourceEpsg, &poSrsDst, options );	
+}
+
+
+void WTMCalculator::transformLatLonToWTM( OGRPoint &pnt )
+{
+	if ( mTransform )
+	{
+		pnt.transform( mTransform );
+	}
 }
 
 

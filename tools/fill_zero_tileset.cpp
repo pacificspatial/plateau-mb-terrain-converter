@@ -29,9 +29,9 @@ int main( int argc, char* argv[] )
 			pathOutDir.assign( argv[1] );
 		}
 
-		PlateauMapboxTerrainConverter::fill_zero( pathOutDir.u8string(),
-			[&]( PlateauMapboxTerrainConverter::MESSAGE_STATUS eStatus, const std::string& strMessage ) {
-				if ( eStatus == PlateauMapboxTerrainConverter::MESSAGE_ERROR )
+		pmtc::fill_zero( pathOutDir.u8string(),
+			[&]( MESSAGE_STATUS eStatus, const std::string& strMessage ) {
+				if ( eStatus == MESSAGE_ERROR )
 				{
 					std::cerr << "ERROR : " << strMessage << std::endl;
 				}

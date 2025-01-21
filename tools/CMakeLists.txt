@@ -4,6 +4,10 @@ add_executable(convertTerrainToMapboxRGB convertTerrainToMapboxRGB_main.cpp)
 target_compile_features(convertTerrainToMapboxRGB PUBLIC cxx_std_17)
 target_link_libraries(convertTerrainToMapboxRGB PRIVATE libplateauterrainrgb)
 
+add_executable(convertGsiDemToMapboxRGB convertGsiDemToMapboxRGB_main.cpp)
+target_compile_features(convertGsiDemToMapboxRGB PUBLIC cxx_std_17)
+target_link_libraries(convertGsiDemToMapboxRGB PRIVATE libplateauterrainrgb)
+
 add_executable(merge_tilesets merge_tilesets.cpp)
 target_compile_features(merge_tilesets PUBLIC cxx_std_17)
 target_link_libraries(merge_tilesets PRIVATE libplateauterrainrgb)

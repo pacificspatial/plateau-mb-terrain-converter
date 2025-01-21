@@ -1,4 +1,5 @@
 
+
 #include <plateau-mb-terrain-converter.h>
 #include <iostream>
 #include <filesystem>
@@ -8,8 +9,8 @@
 
 void usage()
 {
-	std::cerr << "convertTerrainToMapboxRGB Usage: " << std::endl;
-	std::cerr << "convertTerrainToMapboxRGB [(options)] [input file path(CityGML)] [output directory]" << std::endl;
+	std::cerr << "convertGsiDemToMapboxRGB Usage: " << std::endl;
+	std::cerr << "convertGsiDemToMapboxRGB [(options)] [input file path(CityGML)] [output directory]" << std::endl;
 	std::cerr << "options :" << std::endl;
 	std::cerr << "    --min_zoom [zoom no] : minimum zoom level (default = 6)" << std::endl;
 	std::cerr << "    --max_zoom [zoom no] : maximum zoom level (default = 15)" << std::endl;
@@ -94,25 +95,25 @@ int main( int argc, char* argv[] )
 
 	try
 	{
-		pmtc::createPlateauTileset(
+		pmtc::createGsiTileset(
 			strInputFName, strOutputDir, nMinZoom, nMaxZoom, bOverwrite,
 			[&]( MESSAGE_STATUS eStatus, const std::string& strMessage ){
-				if ( eStatus == MESSAGE_ERROR )
+			if ( eStatus == MESSAGE_ERROR )
+			{
+				std::cerr << "ERROR : " << strMessage << std::endl;
+				if ( ofsLog )
 				{
-					std::cerr << "ERROR : " << strMessage << std::endl;
-					if ( ofsLog )
-					{
-						ofsLog << "ERROR : " << strMessage << std::endl;
-					}
+					ofsLog << "ERROR : " << strMessage << std::endl;
 				}
-				else
-				{
-					std::cout << strMessage << std::endl;
-				}
-			},
-			[]( int nProgress ){
-				std::cout << nProgress << '\r' << std::flush;
 			}
+			else
+			{
+				std::cout << strMessage << std::endl;
+			}
+		},
+			[]( int nProgress ){
+			std::cout << nProgress << '\r' << std::flush;
+		}
 		);
 	}
 	catch ( std::range_error& e )

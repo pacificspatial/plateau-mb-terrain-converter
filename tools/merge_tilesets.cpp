@@ -47,10 +47,10 @@ int main( int argc, char* argv[] )
 
 	try
 	{
-		PlateauMapboxTerrainConverter::mergeTilesets(
+		pmtc::mergeTilesets(
 			vstrInputDirs, strOutDir, bOverwrite,
-			[&]( PlateauMapboxTerrainConverter::MESSAGE_STATUS eStatus, const std::string& strMessage ) {
-				if ( eStatus == PlateauMapboxTerrainConverter::MESSAGE_ERROR )
+			[&]( MESSAGE_STATUS eStatus, const std::string& strMessage ) {
+				if ( eStatus == MESSAGE_ERROR )
 				{
 					std::cerr << "ERROR : " << strMessage << std::endl;
 				}
