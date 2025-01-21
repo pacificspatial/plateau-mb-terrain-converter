@@ -9,12 +9,12 @@
 #include <functional>
 
 
-class CityGMLManager
+class CityGMLReader
 {
 public:
-	CityGMLManager() = delete;
-	CityGMLManager( const std::string &strFName	);
-	virtual ~CityGMLManager();
+	CityGMLReader() = delete;
+	CityGMLReader( const std::string &strFName	);
+	virtual ~CityGMLReader();
 
 	bool getNextTriangle( OGRPoint &p1, OGRPoint &p2, OGRPoint &p3 );
 	const OGRSpatialReference* getSpatialRef() const;

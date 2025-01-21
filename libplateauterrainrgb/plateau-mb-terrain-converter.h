@@ -31,20 +31,16 @@ class CityGMLManager;
 class WebTileManager;
 
 
-class PMTC_DLL PlateauMapboxTerrainConverter
+enum MESSAGE_STATUS
 {
-public:
+    MESSAGE_INFO,
+    MESSAGE_WARNING,
+    MESSAGE_ERROR
+};
 
-    enum MESSAGE_STATUS
-    {
-        MESSAGE_INFO,
-        MESSAGE_WARNING,
-        MESSAGE_ERROR
-    };
-
-
-    PlateauMapboxTerrainConverter() = delete;
-    PlateauMapboxTerrainConverter(
+namespace pmtc
+{
+    bool PMTC_DLL createPlateauTileset(
         const std::string &strInputTerrainCityGML, 
         const std::string &strOutputTileDirectory, 
         const int nMinZoomLevel, 
@@ -53,38 +49,28 @@ public:
         const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback = nullptr,
         const std::function<void(int)> &fnProgressFeedback = nullptr
     );
-    virtual ~PlateauMapboxTerrainConverter();
 
-    inline bool isValid() const { return mbValid; }
+    bool PMTC_DLL createGsiTileset(
+        const std::string &strInputGsiGml,
+        const std::string &strOutputTileDirectory,
+        const int nMinZoomLevel,
+        const int nMaxZoomLevel,
+        const bool bOverwrite,
+        const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback = nullptr,
+        const std::function<void(int)> &fnProgressFeedback = nullptr
+    );
 
-    void createTileset();
-
-    static void mergeTilesets( 
+    void PMTC_DLL mergeTilesets( 
         const std::vector<std::string> &vstrInputDirs,
         const std::string& strOutDir, 
         const bool bOverwrite,
         const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback = nullptr,
         const std::function<void(int)> &fnProgressFeedback = nullptr 
-        );
+    );
 
-    static void fill_zero(
+    void PMTC_DLL fill_zero(
         const std::string &strTileDir,
         const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback = nullptr,
         const std::function<void(int)> &fnProgressFeedback = nullptr 
     );
-
-private:
-    std::string mstrInputTerrainCityGML;
-    std::string mstrTileDirectory;
-    int mnMinZoomLevel;
-    int mnMaxZoomLevel;
-    bool mbValid;
-
-    std::unique_ptr<WTMCalculator> mpWTMCalculator;
-    std::unique_ptr<CityGMLManager> mpCityGMLManager;
-    std::unique_ptr<WebTileManager> mpWebTileManager;
-
-    std::function<void(MESSAGE_STATUS, std::string)> mfnMessageFeedback;
-    std::function<void(int)> mfnProgressFeedback;
-};
-
+}

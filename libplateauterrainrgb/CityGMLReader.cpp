@@ -1,12 +1,12 @@
 
-#include "CityGMLManager.h"
+#include "CityGMLReader.h"
 
 #include <gdal_priv.h>
 #include <ogrsf_frmts.h>
 #include <iostream>
 
 
-CityGMLManager::CityGMLManager( 
+CityGMLReader::CityGMLReader( 
 	const std::string& strFName
 )
 	:
@@ -85,7 +85,7 @@ CityGMLManager::CityGMLManager(
 }
 
 
-CityGMLManager::~CityGMLManager()
+CityGMLReader::~CityGMLReader()
 {
 	if ( mpCurrentFeature )
 	{
@@ -94,7 +94,7 @@ CityGMLManager::~CityGMLManager()
 }
 
 
-void CityGMLManager::reset()
+void CityGMLReader::reset()
 {
 	mnCurrentLayer = 0;
 	mpCurrentLayer->ResetReading();
@@ -106,7 +106,7 @@ void CityGMLManager::reset()
 }
 
 
-const OGRSpatialReference* CityGMLManager::getSpatialRef() const
+const OGRSpatialReference* CityGMLReader::getSpatialRef() const
 {
 	if ( !mbValid ) return nullptr;
 
@@ -117,13 +117,13 @@ const OGRSpatialReference* CityGMLManager::getSpatialRef() const
 }
 
 
-const OGREnvelope& CityGMLManager::getExtent() const
+const OGREnvelope& CityGMLReader::getExtent() const
 {
 	return mEnvelop;
 }
 
 
-void CityGMLManager::setSpatialFilter( const double dLonMin, const double dLonMax, const double dLatMin, const double dLatMax )
+void CityGMLReader::setSpatialFilter( const double dLonMin, const double dLonMax, const double dLatMin, const double dLatMax )
 {
 	mdFilterLonMin = dLonMin;
 	mdFilterLonMax = dLonMax;
@@ -133,7 +133,7 @@ void CityGMLManager::setSpatialFilter( const double dLonMin, const double dLonMa
 }
 
 
-bool CityGMLManager::getNextTriangle( OGRPoint& p1, OGRPoint& p2, OGRPoint& p3 )
+bool CityGMLReader::getNextTriangle( OGRPoint& p1, OGRPoint& p2, OGRPoint& p3 )
 {
 	if ( !mbValid )
 	{

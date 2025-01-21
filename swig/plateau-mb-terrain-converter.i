@@ -17,7 +17,7 @@
 class PMTCFeedback
 {
 public:
-	virtual void messageFeedback(PlateauMapboxTerrainConverter::MESSAGE_STATUS eStatus, const std::string &strMessage ) = 0;
+	virtual void messageFeedback(MESSAGE_STATUS eStatus, const std::string &strMessage ) = 0;
 	virtual void progressFeedback( int nProgress ) = 0;
 	virtual ~PMTCFeedback(){}
 };
@@ -25,7 +25,7 @@ public:
 
 %{
 static PMTCFeedback *gpFeedback = nullptr;
-static void messageCallbackHandler( PlateauMapboxTerrainConverter::MESSAGE_STATUS eStatus, const std::string &strMessage )
+static void messageCallbackHandler( MESSAGE_STATUS eStatus, const std::string &strMessage )
 {
 	if ( gpFeedback )
 	{
@@ -61,10 +61,7 @@ static void progressCallbackHandler( int nProgress )
 
 
 %inline %{
-class PyPlateauMapboxTerrainConverter
-{
-public:
-	inline PyPlateauMapboxTerrainConverter(
+	inline bool CreatePlateauTileset(
         const std::string &strInputTerrainCityGML, 
         const std::string &strOutputTileDirectory, 
         const int nMinZoomLevel, 
@@ -73,8 +70,7 @@ public:
 		PMTCFeedback *pFeedback
 	)
 	{
-		gpFeedback = pFeedback;
-		mObj = std::make_unique<PlateauMapboxTerrainConverter>(
+		return pmtc::createPlateauTileset(
 			strInputTerrainCityGML,
 			strOutputTileDirectory,
 			nMinZoomLevel,
@@ -82,13 +78,31 @@ public:
 			bOverwrite,
 			&messageCallbackHandler,
 			&progressCallbackHandler
+		); 
+	}
+
+	inline bool CreateGsiTileset(
+        const std::string &strInputGsiGml,
+        const std::string &strOutputTileDirectory,
+        const int nMinZoomLevel,
+        const int nMaxZoomLevel,
+        const bool bOverwrite,
+        const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback,
+        const std::function<void(int)> &fnProgressFeedback
+    )
+	{
+		return pmtc::createGsiTileset(
+			strInputGsiGml,
+			strOutputTileDirectory,
+			nMinZoomLevel,
+			nMaxZoomLevel,
+			bOverwrite,
+			fnMessageFeedback,
+			fnProgressFeedback
 		);
 	}
 
-	inline void createTileset(){ if ( mObj->isValid() ) mObj->createTileset(); }
-	inline bool isValid() const { return mObj->isValid(); }
-
-    inline static void mergeTilesets( 
+    inline static void MergeTilesets( 
         const std::vector<std::string> &vstrInputDirs,
         const std::string& strOutDir, 
         const bool bOverwrite,
@@ -96,26 +110,22 @@ public:
         )
 	{
 		gpFeedback = pFeedback;
-		PlateauMapboxTerrainConverter::mergeTilesets(
+		pmtc::mergeTilesets(
 			vstrInputDirs, strOutDir, bOverwrite,
 			&messageCallbackHandler, &progressCallbackHandler
 		);
 	}
 
 	
-    inline static void fill_zero(
+    inline static void Fill_zero(
         const std::string &strTileDir,
 		PMTCFeedback *pFeedback
     )
 	{
 		gpFeedback = pFeedback;
-		PlateauMapboxTerrainConverter::fill_zero( 
+		pmtc::fill_zero( 
 			strTileDir,
 			&messageCallbackHandler, &progressCallbackHandler
 		);
 	}
-
-private:
-	std::unique_ptr<PlateauMapboxTerrainConverter> mObj = nullptr;
-};
 %}
