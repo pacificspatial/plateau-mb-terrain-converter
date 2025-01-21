@@ -5,8 +5,8 @@
 
 GsiTileManager::GsiTileManager( 
 	const std::string& strOutputDirectory,
-	const int nMinZoomLevel,
-	const int nMaxZoomLevel,
+	const uint32_t nMinZoomLevel,
+	const uint32_t nMaxZoomLevel,
 	const bool bOverwrite,
 	const std::function<void( MESSAGE_STATUS, std::string )>& fnMessageFeedback,
 	const std::function<void( int )>& fnProgressFeedback
@@ -86,8 +86,8 @@ bool GsiTileManager::createOverviews()
 
 bool GsiTileManager::createBaseTilesFromImage( 
 	WTM_BBOX bbox_bl, 
-	int nWidth, 
-	int nHeight, 
+	const uint32_t nWidth, 
+	const uint32_t nHeight, 
 	double* pData, 
 	std::shared_ptr<WTMCalculator> calculator
 )
@@ -117,32 +117,32 @@ bool GsiTileManager::createBaseTilesFromImage(
 	auto infoTL = calculator->calcTilePixelCoordFromTotalPixelCoord( pixTL );
 	auto infoBR = calculator->calcTilePixelCoordFromTotalPixelCoord( pixBR );
 
-	for ( int nTileY = infoTL.tileNum.nY; 
+	for ( uint32_t nTileY = infoTL.tileNum.nY; 
 		nTileY <= infoBR.tileNum.nY; 
 		nTileY++ )
 	{
 		//std::cout << nTileY << std::endl;
 
-		for ( int nTileX = infoTL.tileNum.nX;
+		for ( uint32_t nTileX = infoTL.tileNum.nX;
 			nTileX <= infoBR.tileNum.nX;
 			nTileX++ )
 		{
 			uint8_t *pImgBuf = static_cast<uint8_t *>( CPLCalloc( TILE_PIXELS*TILE_PIXELS*4, 1 ) );
-			int nSX = nTileX == infoTL.tileNum.nX ? infoTL.pixCoord.nU : 0;
-			int nEX = nTileX == infoBR.tileNum.nX ? infoBR.pixCoord.nU : TILE_PIXELS - 1;
-			int nSY = nTileY == infoTL.tileNum.nY ? infoTL.pixCoord.nV : 0;
-			int nEY = nTileY == infoBR.tileNum.nY ? infoBR.pixCoord.nV : TILE_PIXELS - 1;
+			uint64_t nSX = nTileX == infoTL.tileNum.nX ? infoTL.pixCoord.nU : 0;
+			uint64_t nEX = nTileX == infoBR.tileNum.nX ? infoBR.pixCoord.nU : TILE_PIXELS - 1;
+			uint64_t nSY = nTileY == infoTL.tileNum.nY ? infoTL.pixCoord.nV : 0;
+			uint64_t nEY = nTileY == infoBR.tileNum.nY ? infoBR.pixCoord.nV : TILE_PIXELS - 1;
 
 			//std::cout << nSX << "|" << nSY << "|" << nEX << "|" << nEY << std::endl;
 
-			for ( int i = nSY; i <= nEY; i++ )
+			for ( uint64_t i = nSY; i <= nEY; i++ )
 			{
 				double dWTM_Y = WTM_MAX_Y - (nTileY*TILE_PIXELS + i + 0.5)*sWTMResolution.getY();
 				if ( dWTM_Y > bbox_bl.tl.getY() || dWTM_Y < bbox_bl.br.getY() )
 				{
 					continue;
 				}
-				for ( int j = nSX; j <= nEX; j++ )
+				for ( uint64_t j = nSX; j <= nEX; j++ )
 				{
 					double dWTM_X = WTM_MIN_X + (nTileX*TILE_PIXELS + j + 0.5)*sWTMResolution.getX();
 					if ( dWTM_X < bbox_bl.tl.getX() || dWTM_X > bbox_bl.br.getX() )
@@ -185,4 +185,6 @@ bool GsiTileManager::createBaseTilesFromImage(
 			CPLFree( pImgBuf );
 		}
 	}
+
+	return true;
 }

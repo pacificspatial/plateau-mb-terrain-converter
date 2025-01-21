@@ -331,7 +331,7 @@ std::vector<TILE_COORD> WebTileManager::getOverviewTileList( std::vector<TILE_CO
 bool WebTileManager::buildOverviews( std::vector<TILE_COORD> &vBaseTiles )
 {
 	auto vTiles = getOverviewTileList( vBaseTiles );
-	int nCurrentZoomLevel = vBaseTiles.front().nZ - 1;
+	uint32_t nCurrentZoomLevel = vBaseTiles.front().nZ - 1;
 
 	if ( nCurrentZoomLevel >= mnMinZoomLevel )
 	{
@@ -592,7 +592,6 @@ bool WebTileManager::createOverviewTileFromQuadTiles(
 	const std::filesystem::path& pathTileBL,
 	const std::filesystem::path& pathTileBR )
 {
-	png_image pngOut;
 	uint8_t *pImgIn = static_cast<uint8_t *>( std::malloc( TILE_PIXELS*TILE_PIXELS*4 ) );
 	uint8_t *pImgOut = static_cast<uint8_t *>( std::malloc( TILE_PIXELS*TILE_PIXELS*4 ) );
 	if ( !pImgOut )

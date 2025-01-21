@@ -8,8 +8,8 @@ class GsiTileManager : public WebTileManager
 public:
 	GsiTileManager() = delete;
 	GsiTileManager( const std::string &strOutputDirectory,
-		const int nMinZoomLevel,
-		const int nMaxZoomLevel,
+		const uint32_t nMinZoomLevel,
+		const uint32_t nMaxZoomLevel,
 		const bool bOverwrite = false,
 		const std::function<void(MESSAGE_STATUS, std::string)> &fnMessageFeedback = nullptr,
 		const std::function<void(int)> &fnProgressFeedback = nullptr
@@ -19,8 +19,8 @@ public:
 	inline bool isValid() const { return mbValid; }
 	bool createBaseTilesFromImage( 
 		WTM_BBOX bbox_bl, 
-		int nWidth, 
-		int nHeight, 
+		const uint32_t nWidth, 
+		const uint32_t nHeight, 
 		double *pData, 
 		std::shared_ptr<WTMCalculator> calculator 
 	);

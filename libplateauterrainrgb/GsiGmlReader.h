@@ -15,7 +15,7 @@ public:
 
 	inline bool isValid() const { return mbValid; }
 	inline std::string getErrorMsg() const { return mstrErrorMsg; }
-	void getImage( WTM_BBOX *bbox, int *nWidth, int *nHeight, double **pData );
+	void getImage( WTM_BBOX *bbox, uint32_t *nWidth, uint32_t *nHeight, double **pData );
 
 private:
 	bool mbValid;

@@ -75,7 +75,7 @@ WTM_BBOX WTMCalculator::calcTriangleToWTMBbox( OGRPoint &p1, OGRPoint &p2, OGRPo
 
 OGRPoint WTMCalculator::calcWTMResolution( uint32_t nZoomLevel, uint32_t nPixels )
 {
-	uint64_t nDiv = 1 << nZoomLevel;
+	uint64_t nDiv = static_cast<uint64_t>(1) << nZoomLevel;
 
 	return {WTM_WIDTH / (nDiv*nPixels), WTM_HEIGHT / (nDiv*nPixels)};
 }

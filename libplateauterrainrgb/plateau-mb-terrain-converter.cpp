@@ -85,7 +85,7 @@ bool pmtc::createPlateauTileset(
 
     pWebTileManager->finalizePushing();
 
-    pWebTileManager->createTilesFromDB();
+    return pWebTileManager->createTilesFromDB();
 }
 
 
@@ -100,7 +100,7 @@ bool pmtc::createGsiTileset(
 )
 {
     WTM_BBOX bbox;
-    int nWidth, nHeight;
+    uint32_t nWidth, nHeight;
     double *pData;
 
     std::unique_ptr<GsiTileManager> tileManager = 
@@ -147,7 +147,7 @@ bool pmtc::createGsiTileset(
         return false;
     }
 
-    tileManager->createOverviews();
+    return tileManager->createOverviews();
 }
 
 

@@ -49,7 +49,7 @@ static void progressCallbackHandler( int nProgress )
 	{
 		$action
 	}
-	catch (std::range_error &e)
+	catch ([[maybe_unused]]std::range_error &e)
 	{
 		SWIG_exception(SWIG_ValueError, "Range Error");
 	}

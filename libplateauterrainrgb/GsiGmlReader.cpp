@@ -85,24 +85,23 @@ GsiGmlReader::~GsiGmlReader()
 }
 
 
-void GsiGmlReader::getImage( WTM_BBOX* bbox, int* nWidth, int* nHeight, double **pData )
+void GsiGmlReader::getImage( WTM_BBOX* bbox, uint32_t *nWidth, uint32_t *nHeight, double **pData )
 {
 	*bbox = mrcDemRect;
-	*nWidth = mpntHigh.nU - mpntLow.nU + 1;
-	*nHeight = mpntHigh.nV - mpntLow.nV + 1;
+	*nWidth = static_cast<uint32_t>( mpntHigh.nU - mpntLow.nU + 1 );
+	*nHeight = static_cast<uint32_t>( mpntHigh.nV - mpntLow.nV + 1 );
 	*pData = mpData;
 }
 
 
 void GsiGmlReader::createImage()
 {
-	uint8_t bR, bG, bB, bA;
-	int nWidth = (mpntHigh.nU - mpntLow.nU + 1);
-	int nHeight = (mpntHigh.nV - mpntLow.nV + 1);
+	uint64_t nWidth = static_cast<uint32_t>(mpntHigh.nU - mpntLow.nU + 1);
+	uint64_t nHeight = (mpntHigh.nV - mpntLow.nV + 1);
 
 	mpData = new double[nWidth*nHeight];
 
-	int n = mpntStartPoint.nV*nWidth + mpntStartPoint.nU;
+	uint64_t n = mpntStartPoint.nV*nWidth + mpntStartPoint.nU;
 	for ( auto d : mvData )
 	{
 		if ( d < -9998 )
@@ -321,13 +320,13 @@ bool GsiGmlReader::processNode( xmlTextReaderPtr pReader )
 			{
 				if ( mStateFlags & GML_LOW )
 				{
-					sscanf( (const char*)xmlTextReaderConstValue( pReader ), "%ld %ld",
+					sscanf( (const char*)xmlTextReaderConstValue( pReader ), "%lld %lld",
 							&mpntLow.nU, &mpntLow.nV );
 					return true;
 				}
 				else if ( mStateFlags & GML_HIGH )
 				{
-					sscanf( (const char *)xmlTextReaderConstValue(pReader), "%ld %ld",
+					sscanf( (const char *)xmlTextReaderConstValue(pReader), "%lld %lld",
 							&mpntHigh.nU, &mpntHigh.nV );
 					return true;
 				}
@@ -356,7 +355,7 @@ bool GsiGmlReader::processNode( xmlTextReaderPtr pReader )
 				}
 				if ( mStateFlags & GML_STARTPOINT )
 				{
-					sscanf( (const char *)xmlTextReaderConstValue(pReader), "%ld %ld",
+					sscanf( (const char *)xmlTextReaderConstValue(pReader), "%lld %lld",
 							&mpntStartPoint.nU, &mpntStartPoint.nV );
 					return true;
 				}

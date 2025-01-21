@@ -59,8 +59,8 @@ protected:
 	bool mbValid;
 	bool mbOverwrite;
 
-	int mnMinZoomLevel;
-	int mnMaxZoomLevel;
+	uint32_t mnMinZoomLevel;
+	uint32_t mnMaxZoomLevel;
 
 	//std::string mstrErrorMsg;
 	std::filesystem::path mpathOutputDirectory;
