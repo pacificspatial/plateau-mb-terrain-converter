@@ -10,7 +10,7 @@
 void usage()
 {
 	std::cerr << "convertGsiDemToMapboxRGB Usage: " << std::endl;
-	std::cerr << "convertGsiDemToMapboxRGB [(options)] [input file path(CityGML)] [output directory]" << std::endl;
+	std::cerr << "convertGsiDemToMapboxRGB [(options)] [input file path(.xml)] [output directory]" << std::endl;
 	std::cerr << "options :" << std::endl;
 	std::cerr << "    --min_zoom [zoom no] : minimum zoom level (default = 6)" << std::endl;
 	std::cerr << "    --max_zoom [zoom no] : maximum zoom level (default = 15)" << std::endl;
