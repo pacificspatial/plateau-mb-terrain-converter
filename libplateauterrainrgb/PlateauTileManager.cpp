@@ -1,5 +1,6 @@
 
 #include "PlateauTileManager.h"
+#include <cstring>
 
 
 #define ERRORCHECK(f) \
