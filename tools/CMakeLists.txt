@@ -27,9 +27,9 @@ if (UNIX)
 	set_target_properties(merge_tilesets 
 		PROPERTIES INSTALL_RPATH
 	 	${CMAKE_INSTALL_PREFIX}/lib)
-	set_target_properties(fill_zero_tileset
+	set_target_properties(fill_zero_tileset 
 		PROPERTIES INSTALL_RPATH
-		${CMAKE_INSTALL_PREFIX/lib})
+		${CMAKE_INSTALL_PREFIX}/lib})
 
 	if (APPLE)
 		set_target_properties(convertTerrainToMapboxRGB
