@@ -24,6 +24,9 @@ if (UNIX)
 	set_target_properties(convertTerrainToMapboxRGB 
 		PROPERTIES INSTALL_RPATH
 		${CMAKE_INSTALL_PREFIX}/lib)
+	set_target_properties(convertGsiDemToMapboxRGB
+		PROPERTIES INSTALL_RPATH
+		${CMAKE_INSTALL_PREFIX}/lib})
 	set_target_properties(merge_tilesets 
 		PROPERTIES INSTALL_RPATH
 	 	${CMAKE_INSTALL_PREFIX}/lib)
@@ -33,6 +36,9 @@ if (UNIX)
 
 	if (APPLE)
 		set_target_properties(convertTerrainToMapboxRGB
+			PROPERTIES
+			INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
+		set_target_properties(convertGsiDemToMapboxRGB
 			PROPERTIES
 			INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
 		set_target_properties(merge_tilesets
@@ -46,4 +52,6 @@ endif()
 
 install(TARGETS convertTerrainToMapboxRGB RUNTIME DESTINATION bin)
 install(TARGETS merge_tilesets RUNTIME DESTINATION bin)
+install(TARGETS fill_zero_tileset RUNTIME DESTINATION bin)
+install(TARGETS convertGsiDemToMapboxRGB RUNTIME DESTINATION bin)
 
