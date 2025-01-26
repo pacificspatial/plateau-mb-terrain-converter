@@ -100,13 +100,15 @@ void GsiGmlReader::createImage()
 	uint64_t nHeight = (mpntHigh.nV - mpntLow.nV + 1);
 
 	mpData = new double[nWidth*nHeight];
+	for ( int i = 0; i < nWidth*nHeight; i++ ) mpData[i] = HUGE_VAL;
 
 	uint64_t n = mpntStartPoint.nV*nWidth + mpntStartPoint.nU;
 	for ( auto d : mvData )
 	{
 		if ( d < -9998 )
 		{
-			mpData[n++] = HUGE_VAL;
+//			mpData[n++] = HUGE_VAL;
+			n++;
 		}
 		else
 		{
