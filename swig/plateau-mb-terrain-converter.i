@@ -1,6 +1,9 @@
 %module(directors="1") plateaumbterrainconverter;
 %include <std_string.i>
+%include <std_vector.i>
 %include <windows.i>
+
+%template(VStr) std::vector<std::string>;
 
 %{
 #include "../libplateauterrainrgb/plateau-mb-terrain-converter.h"
@@ -59,7 +62,6 @@ static void progressCallbackHandler( int nProgress )
 	}
 }
 
-
 %inline %{
 	inline bool CreatePlateauTileset(
         const std::string &strInputTerrainCityGML, 
@@ -70,6 +72,7 @@ static void progressCallbackHandler( int nProgress )
 		PMTCFeedback *pFeedback
 	)
 	{
+		gpFeedback = pFeedback;
 		return pmtc::createPlateauTileset(
 			strInputTerrainCityGML,
 			strOutputTileDirectory,
@@ -87,18 +90,18 @@ static void progressCallbackHandler( int nProgress )
         const int nMinZoomLevel,
         const int nMaxZoomLevel,
         const bool bOverwrite,
-        const std::function<void(MESSAGE_STATUS, const std::string&)> &fnMessageFeedback,
-        const std::function<void(int)> &fnProgressFeedback
+		PMTCFeedback *pFeedback
     )
 	{
+		gpFeedback = pFeedback;
 		return pmtc::createGsiTileset(
 			strInputGsiGml,
 			strOutputTileDirectory,
 			nMinZoomLevel,
 			nMaxZoomLevel,
 			bOverwrite,
-			fnMessageFeedback,
-			fnProgressFeedback
+			&messageCallbackHandler,
+			&progressCallbackHandler
 		);
 	}
 
