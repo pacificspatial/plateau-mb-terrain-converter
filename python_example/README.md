@@ -25,16 +25,6 @@ class myFeedback(PMTCFeedback):
 ```
 このクラスのオブジェクトを作成し、各関数のfeedback引数へ渡してください。
 
-### `std::vector<std::string>`の扱いについて
-
-libplateauterrainrgbライブラリの一部の関数では引数に`std::vector<std::string>`型を要求するものがありますが、Pythonでこの関数の引数に文字列のリストを渡すことはできません。以下のように`VStr`型へ変換して引数に渡してください。
-
-```Python
-	vstr = VStr()
-	for s in args.inputs:
-		vstr.push_back(s)
-```
-
 ## API説明
 
 以下に、各関数について説明します。
@@ -101,7 +91,7 @@ _Note:_
 ## MergeTilesets
 ```python
 def MergeTilesets(
-  vstrInputDirs : VStr, 
+  vstrInputDirs : List[str], 
   strOutDir : str, 
   bOverwrite : bool, 
   pFeedback : myFeedback) -> None:
@@ -114,7 +104,6 @@ def MergeTilesets(
 
 #### 引数
 - vstrInputDirs : 入力ディレクトリ群
-  - VStr型については上記参照
 - strOutDir : 出力ディレクトリ
 - bOverwrite : 上書きモード
 - pFeedback : コールバックオブジェクト（上記参照）

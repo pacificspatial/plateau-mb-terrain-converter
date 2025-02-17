@@ -27,10 +27,7 @@ def pyConvertGsiDemToMapboxRGB(argv = sys.argv):
 
 	args = parser.parse_args()
 	feedback = myFeedback()
-	vstr = VStr()
-	for s in args.inputs:
-		vstr.push_back(s)
-	MergeTilesets(vstr, args.outdir, args.overwrite, feedback)
+	MergeTilesets(args.inputs, args.outdir, args.overwrite, feedback)
 
 if __name__ == "__main__":
     sys.exit(pyConvertGsiDemToMapboxRGB(sys.argv))
