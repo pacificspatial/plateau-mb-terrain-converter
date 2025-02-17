@@ -38,7 +38,7 @@ Mac OS Xの場合はこれらのソフトウェア／ライブラリのインス
 
 ### 3-2．ビルド手順
 
-#### 3-2-1. CMakeコマンド
+以下のコマンドでビルド、インストールを行います。
 
 ```
 $ mkdir build (Windowsの場合はmd build)
@@ -47,4 +47,37 @@ $ cmake ..
 $ cmake --build . --config Release
 $ cmake --install .
 ```
+
+## 4．機能概要
+
+本ライブラリは以下の機能を提供します。
+
+- PLATEAU DEM（CityGML形式）ファイルからMapbox-RGB形式のタイル生成
+- 基盤地図情報標高データからMapbox-RGB形式のタイル生成
+- 複数のMapbox-RGBタイルセットのマージ
+- タイルセットのNoDataピクセルを0mのピクセルに置換
+
+ライブラリが提供するAPIの詳細については[libplateauterrainrgb](https://github.com/pacificspatial/plateau-mb-terrain-converter/tree/main/libplateauterrainrgb)フォルダのページを参照してください。
+
+[tools](https://github.com/pacificspatial/plateau-mb-terrain-converter/tree/main/tools)フォルダには本ライブラリを利用して変換を行う実行ファイルのソースコードがあります。本ライブラリを利用するためのサンプルコードとして参照してください。
+
+本ライブラリは[SWIG](https://www.swig.org/)を利用してPythonバインディングを作成します。Pythonでの利用方法に関しては[python_example](https://github.com/pacificspatial/plateau-mb-terrain-converter/tree/main/python_example)のソースコードを参照してください。
+
+## 5．動作環境
+
+本ライブラリおよびソフトウェアは以下の環境での動作を確認しています。
+- OS:
+  - Windows 10
+  - MAC OS X
+  - Ubuntu 22.04
+- CPU、メモリ、ストレージ等:
+  CPUに関しては特に制限はありません。
+  メモリに関しては入力ファイルのサイズによって必要な容量が決定します。
+  ストレージに関しては入力ファイルの容量に加えて出力されるタイルセットの容量が必要になりますが、これは入力ファイルがカバーしている範囲に依存します。なお、ネットワーク接続は必要ありません。
+
+## 6．ライセンス
+
+
+
+## 7．注意事項
 
