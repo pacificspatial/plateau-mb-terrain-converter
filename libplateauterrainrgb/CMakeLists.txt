@@ -1,4 +1,14 @@
-﻿
+﻿#################################################################################
+#
+# libplateauterrainrgb build configuration file for CMake build system
+#
+# (c) 2025 MLIT Japan.
+# (c) 2025 Pacific Spatial Solutions Inc.
+#
+# Author : Yamate, N
+# 
+#################################################################################
+
 cmake_minimum_required (VERSION 3.8)
 
 set(lib_SRC

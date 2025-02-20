@@ -1,6 +1,14 @@
-﻿# CMakeList.txt : 最上位の CMake プロジェクト ファイル。グローバル構成を行います
-# また、サブプロジェクトをここに含めます。
+﻿#################################################################################
 #
+# plateau-mb-terrain-converter build configuration file for CMake build system
+#
+# (c) 2025 MLIT Japan.
+# (c) 2025 Pacific Spatial Solutions Inc.
+#
+# Author : Yamate, N
+# 
+#################################################################################
+
 cmake_minimum_required (VERSION 3.8)
 cmake_policy(SET CMP0078 NEW)
 cmake_policy(SET CMP0086 NEW)

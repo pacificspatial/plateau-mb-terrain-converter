@@ -1,4 +1,14 @@
+/***************************************************************************
+											 CityGMLReader.h  -  description
+														 -------------------
 
+		Read and manage CityGML file data.
+
+		begin                : Jan. 21, 2025
+		Copyright            : (c) 2025 MLIT Japan.
+												 : (c) 2025 Pacific Spatial Solutions Inc.
+		author               : Yamate, N
+ ***************************************************************************/
 
 #include "CommonStruct.h"
 
@@ -8,18 +18,17 @@
 #include <ogr_core.h>
 #include <functional>
 
-
 class CityGMLReader
 {
 public:
 	CityGMLReader() = delete;
-	CityGMLReader( const std::string &strFName	);
+	CityGMLReader(const std::string &strFName);
 	virtual ~CityGMLReader();
 
-	bool getNextTriangle( OGRPoint &p1, OGRPoint &p2, OGRPoint &p3 );
-	const OGRSpatialReference* getSpatialRef() const;
-	void setSpatialFilter( const double dLonMin, const double dLonMax, const double dLatMin, const double dLatMax );
-	const OGREnvelope& getExtent() const;
+	bool getNextTriangle(OGRPoint &p1, OGRPoint &p2, OGRPoint &p3);
+	const OGRSpatialReference *getSpatialRef() const;
+	void setSpatialFilter(const double dLonMin, const double dLonMax, const double dLatMin, const double dLatMax);
+	const OGREnvelope &getExtent() const;
 
 	inline bool isValid() const { return mbValid; }
 	inline std::string getLastError() const { return mstrErrorMsg; }
@@ -41,7 +50,6 @@ private:
 	int mnCurrentTriangle;
 
 	std::string mstrErrorMsg;
-//	std::function<void(std::string)> mfnMessageFeedback;
 
 	GDALDatasetUniquePtr mpDS;
 	OGRLayer *mpCurrentLayer;

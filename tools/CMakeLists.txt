@@ -1,3 +1,13 @@
+#################################################################################
+#
+# plateau-mb-terrain-converter tools build configuration file for CMake build system
+#
+# (c) 2025 MLIT Japan.
+# (c) 2025 Pacific Spatial Solutions Inc.
+#
+# Author : Yamate, N
+# 
+#################################################################################
 
 
 add_executable(convertTerrainToMapboxRGB convertTerrainToMapboxRGB_main.cpp)

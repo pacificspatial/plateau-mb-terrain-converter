@@ -1,3 +1,14 @@
+#################################################################################
+#                         merge_tilesets_python.py
+# 
+# Python example of MergeTilesets() function.
+#
+# (c) 2025 MLIT Japan.
+# (c) 2025 Pacific Spatial Solutions Inc.
+#
+# Author : Yamate, N
+# 
+#################################################################################
 
 from plateauterrainrgb.pyplateauterrainrgb import *
 import sys, argparse

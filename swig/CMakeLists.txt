@@ -1,3 +1,13 @@
+#################################################################################
+#
+# swug build configuration file for CMake build system
+#
+# (c) 2025 MLIT Japan.
+# (c) 2025 Pacific Spatial Solutions Inc.
+#
+# Author : Yamate, N
+# 
+#################################################################################
 
 # Find Python 3
 set(CMAKE_SWIG_FLAGS)

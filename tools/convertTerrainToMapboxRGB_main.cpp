@@ -1,10 +1,20 @@
+/***************************************************************************
+								convertTerrainToMapboxRGB_main.cpp  -  description
+														 -------------------
+
+		convertTerrainToMapboxRGB application entry point.
+
+		begin                : Jan. 21, 2025
+		Copyright            : (c) 2025 MLIT Japan.
+												 : (c) 2025 Pacific Spatial Solutions Inc.
+		author               : Yamate, N
+ ***************************************************************************/
 
 #include <plateau-mb-terrain-converter.h>
 #include <iostream>
 #include <filesystem>
 #include <fstream>
 #include <cstring>
-
 
 void usage()
 {
@@ -15,11 +25,10 @@ void usage()
 	std::cerr << "    --max_zoom [zoom no] : maximum zoom level (default = 15)" << std::endl;
 	std::cerr << "    --overwrite : overwrite existing tiles" << std::endl;
 	std::cerr << "    --logfile [filename] : specify output log file" << std::endl;
-	exit( 1 );
+	exit(1);
 }
 
-
-int main( int argc, char* argv[] )
+int main(int argc, char *argv[])
 {
 	int nMinZoom = 6;
 	int nMaxZoom = 15;
@@ -28,40 +37,40 @@ int main( int argc, char* argv[] )
 	std::string strInputFName;
 	std::string strOutputDir;
 
+	if (argc < 3)
+		usage();
 
-	if ( argc < 3 ) usage();
-
-	for ( int i = 1; i < argc; i++ )
+	for (int i = 1; i < argc; i++)
 	{
-		if ( std::strcmp( argv[i], "--min_zoom" ) == 0 )
+		if (std::strcmp(argv[i], "--min_zoom") == 0)
 		{
-			nMinZoom = std::stoi( argv[++i] );
+			nMinZoom = std::stoi(argv[++i]);
 		}
-		else if ( std::strcmp( argv[i], "--max_zoom" ) == 0 )
+		else if (std::strcmp(argv[i], "--max_zoom") == 0)
 		{
-			nMaxZoom = std::stoi( argv[++i] );
+			nMaxZoom = std::stoi(argv[++i]);
 		}
-		else if ( std::strcmp( argv[i], "--overwrite" ) == 0 )
+		else if (std::strcmp(argv[i], "--overwrite") == 0)
 		{
 			bOverwrite = true;
 		}
-		else if ( std::strcmp( argv[i], "--logfile" ) == 0 )
+		else if (std::strcmp(argv[i], "--logfile") == 0)
 		{
-			ofsLog.open( argv[++i], std::ios_base::app );
-			if ( !ofsLog )
+			ofsLog.open(argv[++i], std::ios_base::app);
+			if (!ofsLog)
 			{
-				std::cerr << "unable to open log file : [" << argv[i-1] << "]" << std::endl;
+				std::cerr << "unable to open log file : [" << argv[i - 1] << "]" << std::endl;
 			}
 		}
-		else if ( std::strcmp( argv[i], "--help" ) == 0 )
+		else if (std::strcmp(argv[i], "--help") == 0)
 		{
 			usage();
 		}
-		else if ( strInputFName.empty() )
+		else if (strInputFName.empty())
 		{
 			strInputFName = argv[i];
 		}
-		else if ( strOutputDir.empty() )
+		else if (strOutputDir.empty())
 		{
 			strOutputDir = argv[i];
 		}
@@ -72,20 +81,20 @@ int main( int argc, char* argv[] )
 		}
 	}
 
-	if ( strInputFName.empty() )
+	if (strInputFName.empty())
 	{
 		std::cerr << "input file is not specified." << std::endl;
 		usage();
 	}
 
-	if ( strOutputDir.empty() )
+	if (strOutputDir.empty())
 	{
 		std::cerr << "output directory is not specified." << std::endl;
 		usage();
 	}
 
 	std::cout << "[" << strInputFName << "] : process started" << std::endl;
-	if ( ofsLog.is_open() )
+	if (ofsLog.is_open())
 	{
 		ofsLog << "[" << strInputFName << "]" << std::endl;
 	}
@@ -95,35 +104,36 @@ int main( int argc, char* argv[] )
 	try
 	{
 		pmtc::createPlateauTileset(
-			strInputFName, strOutputDir, nMinZoom, nMaxZoom, bOverwrite,
-			[&]( MESSAGE_STATUS eStatus, const std::string& strMessage ){
-				if ( eStatus == MESSAGE_ERROR )
+				strInputFName, strOutputDir, nMinZoom, nMaxZoom, bOverwrite,
+				[&](MESSAGE_STATUS eStatus, const std::string &strMessage)
 				{
-					std::cerr << "ERROR : " << strMessage << std::endl;
-					if ( ofsLog )
+					if (eStatus == MESSAGE_ERROR)
 					{
-						ofsLog << "ERROR : " << strMessage << std::endl;
+						std::cerr << "ERROR : " << strMessage << std::endl;
+						if (ofsLog)
+						{
+							ofsLog << "ERROR : " << strMessage << std::endl;
+						}
 					}
-				}
-				else
+					else
+					{
+						std::cout << strMessage << std::endl;
+					}
+				},
+				[](int nProgress)
 				{
-					std::cout << strMessage << std::endl;
-				}
-			},
-			[]( int nProgress ){
-				std::cout << nProgress << '\r' << std::flush;
-			}
-		);
+					std::cout << nProgress << '\r' << std::flush;
+				});
 	}
-	catch ( std::range_error& e )
+	catch (std::range_error &e)
 	{
 		std::cerr << e.what();
 	}
 
 	auto chronoEnd = std::chrono::system_clock::now();
-	auto chronoTime = std::chrono::duration_cast<std::chrono::seconds>( chronoEnd - chronoStart );
+	auto chronoTime = std::chrono::duration_cast<std::chrono::seconds>(chronoEnd - chronoStart);
 	std::cout << "process finished successfully in " << chronoTime.count() << "seconds." << std::endl;
-	if ( ofsLog.is_open() )
+	if (ofsLog.is_open())
 	{
 		ofsLog << "process finished successfully in " << chronoTime.count() << "seconds." << std::endl;
 		ofsLog.close();
