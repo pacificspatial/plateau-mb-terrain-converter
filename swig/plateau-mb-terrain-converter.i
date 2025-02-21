@@ -10,24 +10,25 @@
 		author               : Yamate, N
  ***************************************************************************/
 
-% module(directors = "1") plateaumbterrainconverter;
-% include<std_string.i> % include<std_vector.i> % include<windows.i>
+%module(directors = "1") plateaumbterrainconverter;
+%include<std_string.i> 
+%include<std_vector.i> 
+%include<windows.i>
 
-		% template(VStr) std::vector<std::string>;
+%template(VStr) std::vector<std::string>;
 
-% {
+%{
 #include "../libplateauterrainrgb/plateau-mb-terrain-converter.h"
 #include <memory>
 #include <iostream>
 #include <functional>
-			% }
+%}
 
-		% include "../libplateauterrainrgb/plateau-mb-terrain-converter.h"
+%include "../libplateauterrainrgb/plateau-mb-terrain-converter.h"
 
-		% feature("director") PMTCFeedback;
+%feature("director") PMTCFeedback;
 
-% inline %
-{
+%inline %{
 	class PMTCFeedback
 	{
 	public:
@@ -35,11 +36,9 @@
 		virtual void progressFeedback(int nProgress) = 0;
 		virtual ~PMTCFeedback() {}
 	};
-	%
-}
+%}
 
-%
-{
+%{
 	static PMTCFeedback *gpFeedback = nullptr;
 	static void messageCallbackHandler(MESSAGE_STATUS eStatus, const std::string &strMessage)
 	{
@@ -55,12 +54,11 @@
 			gpFeedback->progressFeedback(nProgress);
 		}
 	}
-	%
-}
+%}
 
-% include "exception.i"
+%include "exception.i"
 
-		% exception
+%exception
 {
 	try
 	{
@@ -76,8 +74,7 @@
 	}
 }
 
-% inline %
-{
+%inline %{
 	inline bool CreatePlateauTileset(
 			const std::string &strInputTerrainCityGML,
 			const std::string &strOutputTileDirectory,
@@ -137,5 +134,4 @@
 				strTileDir,
 				&messageCallbackHandler, &progressCallbackHandler);
 	}
-	%
-}
+%}
