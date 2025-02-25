@@ -59,7 +59,7 @@ $ cmake --install .
 
 ライブラリが提供するAPIの詳細については[libplateauterrainrgb](https://github.com/pacificspatial/plateau-mb-terrain-converter/tree/main/libplateauterrainrgb)フォルダのページを参照してください。
 
-[tools](https://github.com/pacificspatial/plateau-mb-terrain-converter/tree/main/tools)フォルダには本ライブラリを利用して変換を行う実行ファイルのソースコードがあります。本ライブラリを利用するためのサンプルコードとして参照してください。
+[tools](https://github.com/pacificspatial/plateau-mb-terrain-converter/tree/main/tools)フォルダには本ライブラリを利用して変換を行う実行ファイルのソースコードがあります。コマンドラインの説明は上記フォルダ内に記載されています。ソースコードは本ライブラリを利用するためのサンプルコードとして参照してください。
 
 本ライブラリは[SWIG](https://www.swig.org/)を利用してPythonバインディングを作成します。Pythonでの利用方法に関しては[python_example](https://github.com/pacificspatial/plateau-mb-terrain-converter/tree/main/python_example)のソースコードを参照してください。
 
@@ -77,7 +77,12 @@ $ cmake --install .
 
 ## 6．ライセンス
 
-
+- 本ソフトウェアは、MITライセンスのもとで提供されるオープンソースソフトウエアです。
+- ソースコードおよび関連ドキュメントの著作権は国土交通省および開発者に帰属します。
+- 本ソフトウェアの開発はPacific Spatial Solutions株式会社（[https://pacificspatial.com/](https://pacificspatial.com/)）が行っています。
 
 ## 7．注意事項
 
+- 本リポジトリおよびソフトウェアは Project PLATEAU の参考資料として提供しているものです。動作の保証は行っておりません。
+- 本リポジトリおよび本ソフトウェアの利用により生じた損失及び損害等について、開発者および国土交通省はいかなる責任も負わないものとします。
+- 本リポジトリの内容は予告なく変更・削除する場合があります。
