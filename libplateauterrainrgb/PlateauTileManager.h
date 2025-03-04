@@ -12,6 +12,7 @@
 #pragma once
 
 #include "WebTileManager.h"
+#include <sqlite3.h>
 
 class PlateauTileManager : public WebTileManager
 {
