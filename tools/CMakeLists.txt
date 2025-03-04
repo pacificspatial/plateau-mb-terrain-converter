@@ -31,33 +31,33 @@ target_link_libraries(fill_zero_tileset PRIVATE ${PNG_LIBRARIES})
 target_include_directories(fill_zero_tileset PRIVATE ${PNG_INCLUDE_DIRS})
 
 if (UNIX)
-	set_target_properties(convertTerrainToMapboxRGB 
-		PROPERTIES INSTALL_RPATH
-		${CMAKE_INSTALL_PREFIX}/lib)
-	set_target_properties(convertGsiDemToMapboxRGB
-		PROPERTIES INSTALL_RPATH
-		${CMAKE_INSTALL_PREFIX}/lib)
-	set_target_properties(merge_tilesets 
-		PROPERTIES INSTALL_RPATH
-	 	${CMAKE_INSTALL_PREFIX}/lib)
-	set_target_properties(fill_zero_tileset 
-		PROPERTIES INSTALL_RPATH
-		${CMAKE_INSTALL_PREFIX}/lib)
+    set_target_properties(convertTerrainToMapboxRGB 
+        PROPERTIES INSTALL_RPATH
+        ${CMAKE_INSTALL_PREFIX}/lib)
+    set_target_properties(convertGsiDemToMapboxRGB
+        PROPERTIES INSTALL_RPATH
+        ${CMAKE_INSTALL_PREFIX}/lib)
+    set_target_properties(merge_tilesets 
+        PROPERTIES INSTALL_RPATH
+         ${CMAKE_INSTALL_PREFIX}/lib)
+    set_target_properties(fill_zero_tileset 
+        PROPERTIES INSTALL_RPATH
+        ${CMAKE_INSTALL_PREFIX}/lib)
 
-	if (APPLE)
-		set_target_properties(convertTerrainToMapboxRGB
-			PROPERTIES
-			INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
-		set_target_properties(convertGsiDemToMapboxRGB
-			PROPERTIES
-			INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
-		set_target_properties(merge_tilesets
-			PROPERTIES
-			INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
-		set_target_properties(fill_zero_tileset
-			PROPERTIES
-			INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
-	endif()
+    if (APPLE)
+        set_target_properties(convertTerrainToMapboxRGB
+            PROPERTIES
+            INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
+        set_target_properties(convertGsiDemToMapboxRGB
+            PROPERTIES
+            INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
+        set_target_properties(merge_tilesets
+            PROPERTIES
+            INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
+        set_target_properties(fill_zero_tileset
+            PROPERTIES
+            INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
+    endif()
 endif()
 
 install(TARGETS convertTerrainToMapboxRGB RUNTIME DESTINATION bin)

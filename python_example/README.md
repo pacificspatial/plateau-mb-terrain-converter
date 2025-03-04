@@ -10,18 +10,18 @@ SWIGの仕様の関係でコールバック関数については以下のよう�
 ```python
 class myFeedback(PMTCFeedback):
 
-	def __init__(self):
-		PMTCFeedback.__init__(self)
+    def __init__(self):
+        PMTCFeedback.__init__(self)
 
-	def messageFeedback(self, eStatus, strMessage):
-		if eStatus == MESSAGE_ERROR:
-			print("ERROR : " + strMessage, file=sys.stderr)
-		else:
-			print(strMessage)
+    def messageFeedback(self, eStatus, strMessage):
+        if eStatus == MESSAGE_ERROR:
+            print("ERROR : " + strMessage, file=sys.stderr)
+        else:
+            print(strMessage)
 
-	def progressFeedback(self, nProgress):
-		sys.stdout.write(str(nProgress) + '\r')
-		sys.stdout.flush()
+    def progressFeedback(self, nProgress):
+        sys.stdout.write(str(nProgress) + '\r')
+        sys.stdout.flush()
 ```
 このクラスのオブジェクトを作成し、各関数のfeedback引数へ渡してください。
 
