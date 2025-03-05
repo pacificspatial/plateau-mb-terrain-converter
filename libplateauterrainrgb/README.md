@@ -19,7 +19,7 @@ namespace pmtc
     );
 }
 ```
-PLATEAU DEMのCityGMLファイル（TIN形式）からMapbox-RGB形式のタイルセットを作成します。
+ CityGML形式のPLATEAU地形モデル（TIN）からMapbox-Terrain RGB形式のタイルセットを作成します。
 出力ディレクトリにすでにタイルが存在している場合は`bOverwrite`引数によって以下のように追記されます。
 - true
   - すでに存在しているタイルに対して入力ファイルがカバーする範囲を上書きします。
@@ -27,6 +27,14 @@ PLATEAU DEMのCityGMLファイル（TIN形式）からMapbox-RGB形式のタイ�
   - すでに存在しているタイルのNoDataの部分に対して入力ファイルがカバーする範囲を追記します。
 
 ここでNoDataは出力タイル画像のうちアルファチャンネルの値が0のピクセルを指します。
+
+例として、左の既存のタイルに右のピクセルを追加するとき、`bOverwrite`引数によって以下のように画像が作成されます。
+![orig image](../img/orig_tile.png)
+
+| bOverwriteの値 |                 結果                 |
+| :------------: | :----------------------------------: |
+|     false      | ![false](../img/overwrite-false.png) |
+|      true      |  ![true](../img/overwrite-true.png)  |
 
 #### 引数
 - strInputTerrainCityGML : 入力ファイル名（gml）
@@ -55,7 +63,7 @@ namespace pmtc
     );
 }
 ```
-基盤地図情報標高データ（.xml）ファイルからMapbox-RGB形式のタイルセットを作成します。それ以外の動作は`createPlateauTileset()`関数と同様です。
+基盤地図情報標高データ（.xml）ファイルからMapbox-Terrain RGB形式のタイルセットを作成します。それ以外の動作は`createPlateauTileset()`関数と同様です。
 標高データ中の「データなし」（-9999.0）の点はNoDataとして取り扱われます。
 
 _Note:_

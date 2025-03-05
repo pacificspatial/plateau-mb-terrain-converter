@@ -1,6 +1,8 @@
 
 # PLATEAU Mapbox Terrain Converter
 
+![banner](img/banner.png)
+
 ## 1．概要
 
 PLATEAU Mapbox Terrain Converterは[PLATEAU](https://www.mlit.go.jp/plateau/)が提供するCityGML形式の地形データを[Mapbox Terrain-RGB](https://docs.mapbox.com/ja/data/tilesets/reference/mapbox-terrain-rgb-v1/)に変換する機能を提供するライブラリ、及びそれを用いた実行ファイルです。
@@ -52,9 +54,10 @@ $ cmake --install .
 
 本ライブラリは以下の機能を提供します。
 
-- PLATEAU DEM（CityGML形式）ファイルからMapbox-RGB形式のタイル生成
-- 基盤地図情報標高データからMapbox-RGB形式のタイル生成
-- 複数のMapbox-RGBタイルセットのマージ
+-  CityGML形式のPLATEAU地形モデル（TIN）からMapbox-Terrain RGB形式のタイル生成
+- 基盤地図情報標高データからMapbox-Terrain RGB形式のタイル生成
+- 複数のMapbox-Terrain RGBタイルセットのマージ
+  - 複数のプロセスで生成されたタイルセットを1つにまとめる際に利用します。
 - タイルセットのNoDataピクセルを0mのピクセルに置換
 
 ライブラリが提供するAPIの詳細については[libplateauterrainrgb](https://github.com/pacificspatial/plateau-mb-terrain-converter/tree/main/libplateauterrainrgb)フォルダのページを参照してください。
@@ -62,6 +65,10 @@ $ cmake --install .
 [tools](https://github.com/pacificspatial/plateau-mb-terrain-converter/tree/main/tools)フォルダには本ライブラリを利用して変換を行う実行ファイルのソースコードがあります。コマンドラインの説明は上記フォルダ内に記載されています。ソースコードは本ライブラリを利用するためのサンプルコードとして参照してください。
 
 本ライブラリは[SWIG](https://www.swig.org/)を利用してPythonバインディングを作成します。Pythonでの利用方法に関しては[python_example](https://github.com/pacificspatial/plateau-mb-terrain-converter/tree/main/python_example)のソースコードを参照してください。
+
+以下のサイトでは、本ツールおよびライブラリを使用して作成した全国の地形データを公開しています。
+
+[http://plateau-terrainrgb-demo.s3-website-ap-northeast-1.amazonaws.com/#11.78/35.22809/138.7405/0/75](http://plateau-terrainrgb-demo.s3-website-ap-northeast-1.amazonaws.com/#11.78/35.22809/138.7405/0/75)
 
 ## 5．動作環境
 
