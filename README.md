@@ -67,6 +67,7 @@ $ cmake --install .
 本ライブラリは[SWIG](https://www.swig.org/)を利用してPythonバインディングを作成します。Pythonでの利用方法に関しては[python_example](https://github.com/pacificspatial/plateau-mb-terrain-converter/tree/main/python_example)のソースコードを参照してください。
 
 
+
 **配信URL**
 
 本ツールおよびライブラリを使用して作成した日本全国の地形データを以下のURLにて配信しています。ズームレベルは6～15に対応しています。
@@ -80,9 +81,10 @@ $ cmake --install .
 3. CityGML形式のPLATEAU地形モデル（TIN）が無い箇所を基盤地図情報標高データ（10mメッシュ）で埋めて、日本全国のMapbox-Terrain RGBタイルを作成
 4. 海域等に残ったNoDataのピクセルを0mのピクセルで置換
 
+
 **デモサイト**
 
-以下のサイトでは、本ツールおよびライブラリを使用して作成した日本全国の地形データを公開しています。
+上記の日本全国の地形データを表示するデモサイトを公開しています。
 
 [http://plateau-terrainrgb-demo.s3-website-ap-northeast-1.amazonaws.com/#11.78/35.22809/138.7405/0/75](http://plateau-terrainrgb-demo.s3-website-ap-northeast-1.amazonaws.com/#11.78/35.22809/138.7405/0/75)
 
