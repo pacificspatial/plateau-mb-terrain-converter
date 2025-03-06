@@ -83,7 +83,7 @@ $ cmake --install .
 
 ### 4-3．デモサイト
 
-日本全国の地形データを表示するデモサイトを公開しています。
+上記の日本全国の地形データを表示するデモサイトを公開しています。
 
 [http://plateau-terrainrgb-demo.s3-website-ap-northeast-1.amazonaws.com/#11.78/35.22809/138.7405/0/75](http://plateau-terrainrgb-demo.s3-website-ap-northeast-1.amazonaws.com/#11.78/35.22809/138.7405/0/75)
 
