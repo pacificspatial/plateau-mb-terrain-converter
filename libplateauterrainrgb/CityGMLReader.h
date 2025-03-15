@@ -11,6 +11,7 @@
  ***************************************************************************/
 
 #include "CommonStruct.h"
+#include "plateau-mb-terrain-converter.h"
 
 #include <string>
 #include <gdal_priv.h>
@@ -18,42 +19,45 @@
 #include <ogr_core.h>
 #include <functional>
 
-class CityGMLReader
+namespace pmtc
 {
-public:
-    CityGMLReader() = delete;
-    CityGMLReader(const std::string &strFName);
-    virtual ~CityGMLReader();
+    class CityGMLReader
+    {
+    public:
+        CityGMLReader() = delete;
+        CityGMLReader(const std::string &strFName);
+        virtual ~CityGMLReader();
 
-    bool getNextTriangle(OGRPoint &p1, OGRPoint &p2, OGRPoint &p3);
-    const OGRSpatialReference *getSpatialRef() const;
-    void setSpatialFilter(const double dLonMin, const double dLonMax, const double dLatMin, const double dLatMax);
-    const OGREnvelope &getExtent() const;
+        bool getNextTriangle(OGRPoint &p1, OGRPoint &p2, OGRPoint &p3);
+        const OGRSpatialReference *getSpatialRef() const;
+        void setSpatialFilter(const double dLonMin, const double dLonMax, const double dLatMin, const double dLatMax);
+        const OGREnvelope getExtent() const;
 
-    inline bool isValid() const { return mbValid; }
-    inline std::string getLastError() const { return mstrErrorMsg; }
+        inline bool isValid() const { return mbValid; }
+        inline std::string getLastError() const { return mstrErrorMsg; }
 
-private:
-    bool mbValid;
+    private:
+        bool mbValid;
 
-    int mnCurrentLayer;
-    std::deque<int> mvTerrainLayersNum;
-    void reset();
+        int mnCurrentLayer;
+        std::deque<int> mvTerrainLayersNum;
+        void reset();
 
-    double mdFilterLonMin;
-    double mdFilterLonMax;
-    double mdFilterLatMin;
-    double mdFilterLatMax;
+        double mdFilterLonMin;
+        double mdFilterLonMax;
+        double mdFilterLatMin;
+        double mdFilterLatMax;
 
-    int mnCurrentFeature;
+        int mnCurrentFeature;
 
-    int mnCurrentTriangle;
+        int mnCurrentTriangle;
 
-    std::string mstrErrorMsg;
+        std::string mstrErrorMsg;
 
-    GDALDatasetUniquePtr mpDS;
-    OGRLayer *mpCurrentLayer;
-    OGRFeature *mpCurrentFeature;
-    OGRTriangulatedSurface *mpCurrentGeom;
-    OGREnvelope mEnvelop;
-};
+        GDALDatasetUniquePtr mpDS;
+        OGRLayer *mpCurrentLayer;
+        OGRFeature *mpCurrentFeature;
+        OGRTriangulatedSurface *mpCurrentGeom;
+        OGREnvelope mEnvelop;
+    };
+}

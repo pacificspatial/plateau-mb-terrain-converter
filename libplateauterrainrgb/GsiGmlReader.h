@@ -17,31 +17,34 @@
 #include <libxml/tree.h>
 #include <libxml/xmlreader.h>
 
-class GsiGmlReader
+namespace pmtc
 {
-public:
-    GsiGmlReader() = delete;
-    GsiGmlReader(const std::string &strFName);
-    ~GsiGmlReader();
+    class GsiGmlReader
+    {
+    public:
+        GsiGmlReader() = delete;
+        GsiGmlReader(const std::string &strFName);
+        ~GsiGmlReader();
 
-    inline bool isValid() const { return mbValid; }
-    inline std::string getErrorMsg() const { return mstrErrorMsg; }
-    void getImage(WTM_BBOX *bbox, uint32_t *nWidth, uint32_t *nHeight, double **pData);
+        inline bool isValid() const { return mbValid; }
+        inline std::string getErrorMsg() const { return mstrErrorMsg; }
+        void getImage(WTM_BBOX *bbox, uint32_t *nWidth, uint32_t *nHeight, double **pData);
 
-private:
-    bool mbValid;
+    private:
+        bool mbValid;
 
-    void parseHeightList(const xmlChar *pszData);
-    bool processNode(xmlTextReaderPtr pReader);
-    void createImage();
+        void parseHeightList(const xmlChar *pszData);
+        bool processNode(xmlTextReaderPtr pReader);
+        void createImage();
 
-    uint32_t mStateFlags;
-    WTM_BBOX mrcDemRect;
-    PIXEL_COORD mpntLow, mpntHigh;
-    PIXEL_COORD mpntStartPoint;
-    std::vector<double> mvData;
-    double *mpData;
+        uint32_t mStateFlags;
+        WTM_BBOX mrcDemRect;
+        PIXEL_COORD mpntLow, mpntHigh;
+        PIXEL_COORD mpntStartPoint;
+        std::vector<double> mvData;
+        double *mpData;
 
-    std::string mstrFName;
-    std::string mstrErrorMsg;
-};
+        std::string mstrFName;
+        std::string mstrErrorMsg;
+    };
+}
