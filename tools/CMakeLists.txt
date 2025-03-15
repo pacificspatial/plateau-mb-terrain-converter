@@ -30,6 +30,12 @@ target_link_libraries(fill_zero_tileset PRIVATE libplateauterrainrgb)
 target_link_libraries(fill_zero_tileset PRIVATE ${PNG_LIBRARIES})
 target_include_directories(fill_zero_tileset PRIVATE ${PNG_INCLUDE_DIRS})
 
+add_executable(plateau2gtif plateau2gtif.cpp)
+target_compile_features(plateau2gtif PUBLIC cxx_std_17)
+target_link_libraries(plateau2gtif PRIVATE libplateauterrainrgb)
+target_link_libraries(plateau2gtif PRIVATE ${GDAL_LIBRARY})
+target_include_directories(plateau2gtif PRIVATE ${GDAL_INCLUDE_DIR})
+
 if (UNIX)
     set_target_properties(convertTerrainToMapboxRGB 
         PROPERTIES INSTALL_RPATH
@@ -41,6 +47,9 @@ if (UNIX)
         PROPERTIES INSTALL_RPATH
          ${CMAKE_INSTALL_PREFIX}/lib)
     set_target_properties(fill_zero_tileset 
+        PROPERTIES INSTALL_RPATH
+        ${CMAKE_INSTALL_PREFIX}/lib)
+    set_target_properties(plateau2gtif 
         PROPERTIES INSTALL_RPATH
         ${CMAKE_INSTALL_PREFIX}/lib)
 
@@ -57,6 +66,9 @@ if (UNIX)
         set_target_properties(fill_zero_tileset
             PROPERTIES
             INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
+        set_target_properties(plateau2gtif
+            PROPERTIES
+            INSTALL_NAME_DIR "@rpath" BUILD_WITH_RPATH ON)
     endif()
 endif()
 
@@ -64,4 +76,5 @@ install(TARGETS convertTerrainToMapboxRGB RUNTIME DESTINATION bin)
 install(TARGETS merge_tilesets RUNTIME DESTINATION bin)
 install(TARGETS fill_zero_tileset RUNTIME DESTINATION bin)
 install(TARGETS convertGsiDemToMapboxRGB RUNTIME DESTINATION bin)
+install(TARGETS plateau2gtif RUNTIME DESTINATION bin)
 

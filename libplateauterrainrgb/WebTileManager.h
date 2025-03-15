@@ -21,7 +21,7 @@
 
 namespace pmtc
 {
-    class PMTC_DLL WebTileManager
+    class WebTileManager
     {
     public:
         WebTileManager() = delete;

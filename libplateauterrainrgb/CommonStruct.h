@@ -54,7 +54,8 @@ namespace pmtc
 
     using GRID_INFO = struct _grid_info
     {
-        OGRPoint pnt;
+        uint32_t nU;
+        uint32_t nV;
         double dHeight;
     };
 }

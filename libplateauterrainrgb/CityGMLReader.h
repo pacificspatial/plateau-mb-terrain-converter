@@ -21,7 +21,7 @@
 
 namespace pmtc
 {
-    class PMTC_DLL CityGMLReader
+    class CityGMLReader
     {
     public:
         CityGMLReader() = delete;
@@ -31,7 +31,7 @@ namespace pmtc
         bool getNextTriangle(OGRPoint &p1, OGRPoint &p2, OGRPoint &p3);
         const OGRSpatialReference *getSpatialRef() const;
         void setSpatialFilter(const double dLonMin, const double dLonMax, const double dLatMin, const double dLatMax);
-        const OGREnvelope &getExtent() const;
+        const OGREnvelope getExtent() const;
 
         inline bool isValid() const { return mbValid; }
         inline std::string getLastError() const { return mstrErrorMsg; }

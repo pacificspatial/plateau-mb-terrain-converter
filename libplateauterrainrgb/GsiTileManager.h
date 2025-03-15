@@ -19,7 +19,7 @@ namespace pmtc
 {
     class WTMCalculator;
 
-    class PMTC_DLL GsiTileManager : public WebTileManager
+    class GsiTileManager : public WebTileManager
     {
     public:
         GsiTileManager() = delete;
@@ -37,7 +37,7 @@ namespace pmtc
             const uint32_t nWidth,
             const uint32_t nHeight,
             double *pData,
-            std::shared_ptr<WTMCalculator> calculator);
+            WTMCalculator &calculator);
         bool createOverviews();
 
     private:

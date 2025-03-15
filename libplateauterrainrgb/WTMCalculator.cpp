@@ -22,9 +22,10 @@
 namespace pmtc
 {
 
-    WTMCalculator::WTMCalculator( const OGRSpatialReference* poSrs, int nPixels, int nZoomLevel, COLOR_TYPE eType )
-        : mbValid(false),
-        mSourceEpsg(*poSrs),
+    WTMCalculator::WTMCalculator( const OGRSpatialReference *poSrs, int nPixels, int nZoomLevel, COLOR_TYPE eType )
+        : 
+        mbValid(false),
+        mSourceSrs( poSrs ),
         mnTilePixels(nPixels),
         mnZoomLevel(nZoomLevel),
         meType(eType),
@@ -45,23 +46,23 @@ namespace pmtc
         poSrsDst.importFromEPSG(3857);
         OGRCoordinateTransformationOptions options = OGRCoordinateTransformationOptions();
 
-        mTransform = OGRCreateCoordinateTransformation( &mSourceEpsg, &poSrsDst, options );
+        mTransform.reset( OGRCreateCoordinateTransformation( mSourceSrs, &poSrsDst, options ) );
     }
 
     void WTMCalculator::transformLatLonToWTM(OGRPoint &pnt)
     {
         if ( mTransform )
         {
-            pnt.transform( mTransform );
+            pnt.transform( mTransform.get() );
         }
     }
 
     WTM_BBOX WTMCalculator::calcTriangleToWTMBbox( OGRPoint &p1, OGRPoint &p2, OGRPoint &p3 )
     {
         if (
-            p1.transform( mTransform ) != OGRERR_NONE ||
-            p2.transform( mTransform ) != OGRERR_NONE ||
-            p3.transform( mTransform ) != OGRERR_NONE)
+            p1.transform( mTransform.get() ) != OGRERR_NONE ||
+            p2.transform( mTransform.get() ) != OGRERR_NONE ||
+            p3.transform( mTransform.get() ) != OGRERR_NONE)
         {
             throw std::range_error( "Invalid coordinate detected." );
         }
@@ -242,5 +243,49 @@ namespace pmtc
         }
 
         return std::move(vInfo);
+    }
+
+    std::vector<GRID_INFO> WTMCalculator::getGridInTriangle(
+            const OGRPoint &p1, 
+            const OGRPoint &p2, 
+            const OGRPoint &p3, 
+            const OGRPoint &pTopLeft, 
+            const double dResolutionLon, 
+            const double dResolutionLat )
+    {
+        int f1, f2, f3;
+        std::vector<GRID_INFO> vInfo;
+
+        double dMinX = std::min( std::min( p1.getX(), p2.getX() ), p3.getX() );
+        double dMaxX = std::max( std::max( p1.getX(), p2.getX() ), p3.getX() );
+        double dMinY = std::min( std::min( p1.getY(), p2.getY() ), p3.getY() );
+        double dMaxY = std::max( std::max( p1.getY(), p2.getY() ), p3.getY() );
+
+        uint32_t nSU = static_cast<uint32_t>( std::floor( (dMinX - pTopLeft.getX()) / dResolutionLon ) );
+        uint32_t nEU = static_cast<uint32_t>( std::ceil( (dMaxX - pTopLeft.getX()) / dResolutionLon ) );
+        uint32_t nSV = static_cast<uint32_t>( std::floor( (pTopLeft.getY() - dMaxY) / dResolutionLat ) );
+        uint32_t nEV = static_cast<uint32_t>( std::ceil( (pTopLeft.getY() - dMinY) / dResolutionLat ) );
+
+        for ( uint32_t v = nSV; v <= nEV; v++ )
+        {
+            for ( uint32_t u = nSU; u <= nEU; u++ )
+            {
+                double dSX = pTopLeft.getX() + (u + 0.5)*dResolutionLon;
+                double dSY = pTopLeft.getY() - (v + 0.5)*dResolutionLat;
+                f1 = clcw( {dSX, dSY}, p1, p2 );
+                f2 = clcw( {dSX, dSY}, p2, p3 );
+                f3 = clcw( {dSX, dSY}, p3, p1 );
+
+                if ( (f1*f2) > 0 && (f2*f3) > 0 && (f3*f1) > 0 && (f1 != 0 && f2 != 0 && f3 != 0) )
+                {
+                    double dZ = calcZ( {dSX, dSY}, p1, p2, p3 );
+                    vInfo.push_back( {u, v, dZ} );
+                }
+                u++;
+            }
+            v++;
+        }
+
+        return vInfo;
     }
 }

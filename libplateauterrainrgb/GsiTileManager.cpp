@@ -92,13 +92,13 @@ namespace pmtc
         const uint32_t nWidth,
         const uint32_t nHeight,
         double *pData,
-        std::shared_ptr<WTMCalculator> calculator)
+        WTMCalculator &calculator )
     {
         bool bRes;
         PIXEL_COORD pixTL, pixBR;
 
-        calculator->transformLatLonToWTM(bbox_bl.tl);
-        calculator->transformLatLonToWTM(bbox_bl.br);
+        calculator.transformLatLonToWTM(bbox_bl.tl);
+        calculator.transformLatLonToWTM(bbox_bl.br);
         double dOrigRes_X = (bbox_bl.br.getX() - bbox_bl.tl.getX()) / nWidth;
         double dOrigRes_Y = (bbox_bl.tl.getY() - bbox_bl.br.getY()) / nHeight;
 
@@ -113,8 +113,8 @@ namespace pmtc
         pixBR.nU = (uint32_t)ceil(dWX / sWTMResolution.getX());
         pixBR.nV = (uint32_t)ceil(dWY / sWTMResolution.getY());
 
-        auto infoTL = calculator->calcTilePixelCoordFromTotalPixelCoord(pixTL);
-        auto infoBR = calculator->calcTilePixelCoordFromTotalPixelCoord(pixBR);
+        auto infoTL = calculator.calcTilePixelCoordFromTotalPixelCoord(pixTL);
+        auto infoBR = calculator.calcTilePixelCoordFromTotalPixelCoord(pixBR);
 
         for (uint32_t nTileY = infoTL.tileNum.nY;
             nTileY <= infoBR.tileNum.nY;
@@ -149,7 +149,7 @@ namespace pmtc
                         uint32_t nU = (uint32_t)floor(((dWTM_X - bbox_bl.tl.getX()) / dOrigRes_X) /*+ 0.5*/);
                         uint32_t nV = (uint32_t)floor(((bbox_bl.tl.getY() - dWTM_Y) / dOrigRes_Y) /*+ 0.5*/);
 
-                        auto pixInfo = calculator->calcPix(pData[nV * nWidth + nU]);
+                        auto pixInfo = calculator.calcPix(pData[nV * nWidth + nU]);
                         pImgBuf[i * TILE_PIXELS * 4 + j * 4 + 0] = pixInfo.nR;
                         pImgBuf[i * TILE_PIXELS * 4 + j * 4 + 1] = pixInfo.nG;
                         pImgBuf[i * TILE_PIXELS * 4 + j * 4 + 2] = pixInfo.nB;

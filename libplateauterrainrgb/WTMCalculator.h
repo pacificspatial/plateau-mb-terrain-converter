@@ -25,7 +25,7 @@
 
 namespace pmtc
 {
-    class PMTC_DLL WTMCalculator
+    class WTMCalculator
     {
     public:
         enum COLOR_TYPE
@@ -37,11 +37,20 @@ namespace pmtc
 
     public:
         WTMCalculator() = delete;
-        WTMCalculator(const OGRSpatialReference *poSrs, int nPixels, int nZoomLevel, COLOR_TYPE eType);
+        WTMCalculator( const OGRSpatialReference *poSrs, 
+                       int nPixels = 256,
+                       int nZoomLevel = 15, 
+                       COLOR_TYPE eType = MAPBOX_RGB );
         virtual ~WTMCalculator();
 
         std::vector<TILE_PIXEL_INFO> getGridInTriangle( OGRPoint &p1, OGRPoint &p2, OGRPoint &p3 );
-        std::vector<GRID_INFO> getGridInTriangle( OGRPoint &p1, OGRPoint &p2, OGRPoint &p3, OGRPoint &pTL, OGRPoint &gridResolution );
+        std::vector<GRID_INFO> getGridInTriangle(
+            const OGRPoint &p1, 
+            const OGRPoint &p2, 
+            const OGRPoint &p3, 
+            const OGRPoint &pTopLeft, 
+            const double dResolutionLon, 
+            const double dResolutionLat );
 
         static OGRPoint calcWTMResolution(uint32_t nZoomLevel, uint32_t nPixels);
 
@@ -62,13 +71,13 @@ namespace pmtc
         static int clcw(const OGRPoint &p1, const OGRPoint &p2, const OGRPoint &p3);
         static double calcZ(OGRPoint &&p, const OGRPoint &tp1, const OGRPoint &tp2, const OGRPoint &tp3);
 
-        OGRSpatialReference mSourceEpsg;
+        const OGRSpatialReference *mSourceSrs;
         uint32_t mnZoomLevel;
         uint32_t mnTilePixels;
         bool mbValid;
         OGRPoint mWTMResolution;
         COLOR_TYPE meType;
 
-        OGRCoordinateTransformation *mTransform;
+        std::unique_ptr<OGRCoordinateTransformation> mTransform;
     };
 }

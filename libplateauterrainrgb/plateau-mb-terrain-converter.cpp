@@ -52,19 +52,20 @@ namespace pmtc
             return false;
         }
 
+        OGRSpatialReference *pSrs = nullptr;
         auto pInputSpatialRef = pCityGMLManager->getSpatialRef();
-        if (pInputSpatialRef)
+        if ( pInputSpatialRef )
         {
-            pWTMCalculator = std::make_unique<WTMCalculator>(pInputSpatialRef, TILE_PIXELS, nMaxZoomLevel, WTMCalculator::MAPBOX_RGB);
+            pWTMCalculator = std::make_unique<WTMCalculator>( pInputSpatialRef );
         }
         else
         {
             std::cout << "srs is not defined.. " << std::endl;
-            OGRSpatialReference oSrs;
-            oSrs.importFromEPSG(4612);
-            oSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+            pSrs = new OGRSpatialReference();
+            pSrs->importFromEPSG( 4612 );
+            pSrs->SetAxisMappingStrategy( OAMS_TRADITIONAL_GIS_ORDER );
 
-            pWTMCalculator = std::make_unique<WTMCalculator>(&oSrs, TILE_PIXELS, nMaxZoomLevel, WTMCalculator::MAPBOX_RGB);
+            pWTMCalculator = std::make_unique<WTMCalculator>( pSrs );
         }
 
         ///----------------------------------------
@@ -125,18 +126,18 @@ namespace pmtc
         {
             std::cout << nProgress << '\r' << std::flush;
         });
-        if (!tileManager->isValid())
+        if ( !tileManager->isValid() )
         {
             return false;
         }
 
-        OGRSpatialReference oSrs;
-        oSrs.importFromEPSG(4612);
-        oSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-        auto calculator = std::make_shared<WTMCalculator>(&oSrs, TILE_PIXELS, nMaxZoomLevel, WTMCalculator::MAPBOX_RGB);
+        OGRSpatialReference *pSrs = new OGRSpatialReference();
+        pSrs->importFromEPSG( 4612 );
+        pSrs->SetAxisMappingStrategy( OAMS_TRADITIONAL_GIS_ORDER );
+        WTMCalculator calculator( pSrs, TILE_PIXELS, nMaxZoomLevel, WTMCalculator::MAPBOX_RGB );
 
-        std::shared_ptr<GsiGmlReader> gsi = std::make_shared<GsiGmlReader>(strInputGsiGml);
-        if (!gsi->isValid())
+        std::unique_ptr<GsiGmlReader> gsi = std::make_unique<GsiGmlReader>( strInputGsiGml );
+        if ( !gsi->isValid() )
         {
             fnMessageFeedback(MESSAGE_ERROR, gsi->getErrorMsg());
             return false;
@@ -144,8 +145,8 @@ namespace pmtc
 
         gsi->getImage(&bbox, &nWidth, &nHeight, &pData);
         bool bRes = tileManager->createBaseTilesFromImage(
-            bbox, nWidth, nHeight, pData, calculator);
-        if (!bRes)
+            bbox, nWidth, nHeight, pData, calculator );
+        if ( !bRes )
         {
             fnMessageFeedback(MESSAGE_ERROR, "error occured at image creation.");
             return false;
@@ -273,5 +274,109 @@ namespace pmtc
                 fnProgressFeedback(++i);
             }
         }
+    }
+
+    bool terrain2gtif(
+        const std::string &strInputTerrainCityGML,
+        const std::string &strOutputGTif,
+        double dResolutionLon,
+        double dResolutionLat,
+        const std::function<void(MESSAGE_STATUS, const std::string &)> &fnMessageFeedback,
+        const std::function<void(int)> &fnProgressFeedback
+    )
+    {
+        std::unique_ptr<WTMCalculator> pWTMCalculator;
+
+        if (fnMessageFeedback)
+        {
+            fnMessageFeedback(MESSAGE_INFO, "reading CityGML ...");
+        }
+        auto pCityGMLManager = std::make_unique<CityGMLReader>(strInputTerrainCityGML);
+        if (!pCityGMLManager->isValid())
+        {
+            fnMessageFeedback(MESSAGE_ERROR, pCityGMLManager->getLastError());
+            return false;
+        }
+
+        OGRSpatialReference *pSrs = nullptr;
+        auto pInputSpatialRef = pCityGMLManager->getSpatialRef();
+        if ( pInputSpatialRef )
+        {
+            pWTMCalculator = std::make_unique<WTMCalculator>( pInputSpatialRef );
+        }
+        else
+        {
+            std::cout << "srs is not defined.. " << std::endl;
+            pSrs = new OGRSpatialReference();
+            pSrs->importFromEPSG( 4612 );
+            pSrs->SetAxisMappingStrategy( OAMS_TRADITIONAL_GIS_ORDER );
+
+            pWTMCalculator = std::make_unique<WTMCalculator>( pSrs );
+        }
+
+        ///----------------------------------------
+
+        auto sExtent = pCityGMLManager->getExtent();
+        // adjust extent
+        sExtent.MinX = std::fmod( sExtent.MinX, dResolutionLon ) > dResolutionLon*0.5 ? 
+            sExtent.MinX + (dResolutionLon - std::fmod( sExtent.MinX, dResolutionLon )) : 
+            sExtent.MinX - std::fmod( sExtent.MinX, dResolutionLon );
+        sExtent.MaxY = std::fmod( sExtent.MaxY, dResolutionLat ) > dResolutionLat*0.5 ?
+            sExtent.MaxY + (dResolutionLat - std::fmod( sExtent.MaxY, dResolutionLat)) :
+            sExtent.MaxY - std::fmod( sExtent.MaxY, dResolutionLat );
+
+        uint32_t nXPixes = static_cast<uint32_t>( std::ceil( (sExtent.MaxX - sExtent.MinX) / dResolutionLon ) );
+        uint32_t nYPixes = static_cast<uint32_t>( std::ceil( (sExtent.MaxY - sExtent.MinY) / dResolutionLat ) );
+        auto poDriver = GetGDALDriverManager()->GetDriverByName( "GTiff" );
+        if ( !poDriver )
+        {
+            fnMessageFeedback( MESSAGE_ERROR, "unable to get GTiff driver." );
+            return false;
+        }
+
+        char **ppszOptions = nullptr;
+        char *pszWkt = nullptr;
+        auto poDs = poDriver->Create( strOutputGTif.c_str(), nXPixes, nYPixes, 1, GDT_Float32, ppszOptions );
+        double aGeoTrans[6] = {sExtent.MinX, dResolutionLon, 0.0, sExtent.MaxY, 0.0, -1*dResolutionLat};
+        poDs->SetGeoTransform( aGeoTrans );
+        pSrs->exportToWkt( &pszWkt );
+        poDs->SetProjection( pszWkt );
+
+        auto poBand = poDs->GetRasterBand( 1 );
+        poBand->SetNoDataValue( -9999 );
+
+        ///----------------------------------------
+        OGRPoint p1, p2, p3;
+        float *pfImg = static_cast<float *>( CPLCalloc(nXPixes*nYPixes, sizeof(float)) );
+        for ( uint32_t i = 0; i < nXPixes*nYPixes; i++ )
+        {
+            pfImg[i] = -9999;
+        }
+
+        if (fnMessageFeedback)
+        {
+            fnMessageFeedback( MESSAGE_INFO, "calculating grid height in triangles ..." );
+        }
+
+        int nProcessedTriangle = 0;
+        while ( pCityGMLManager->getNextTriangle(p1, p2, p3) )
+        {
+            auto vGridInfo = pWTMCalculator->getGridInTriangle( p1, p2, p3, OGRPoint(sExtent.MinX, sExtent.MaxY), dResolutionLon, dResolutionLat );
+            for ( auto &pix : vGridInfo )
+            {
+                pfImg[pix.nV*nXPixes + pix.nU] = static_cast<float>( pix.dHeight );
+            }
+            if (fnProgressFeedback)
+            {
+                fnProgressFeedback( nProcessedTriangle++ );
+            }
+        }
+
+        poBand->RasterIO( GF_Write, 0, 0, nXPixes, nYPixes, pfImg, nXPixes, nYPixes, GDT_Float32, 0, 0 );
+
+        GDALClose( poDs );
+        CPLFree( pfImg );
+
+        return true;
     }
 }

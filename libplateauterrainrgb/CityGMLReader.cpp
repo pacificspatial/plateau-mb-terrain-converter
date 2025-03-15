@@ -121,7 +121,7 @@ namespace pmtc
         return cs;
     }
 
-    const OGREnvelope &CityGMLReader::getExtent() const
+    const OGREnvelope CityGMLReader::getExtent() const
     {
         return mEnvelop;
     }

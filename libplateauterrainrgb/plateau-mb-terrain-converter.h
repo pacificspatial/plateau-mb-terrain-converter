@@ -114,4 +114,25 @@ namespace pmtc
         const std::string &strTileDir,
         const std::function<void(MESSAGE_STATUS, const std::string &)> &fnMessageFeedback = nullptr,
         const std::function<void(int)> &fnProgressFeedback = nullptr);
+
+    /**
+     * @brief convert plateau dem (TIN) to geotiff.
+     * 
+     * @param strInputTerrainCityGML input PLATEAU DEM file (*.gml)
+     * @param strOutputGTif output geotiff file name (*.tif)
+     * @param dResolutionLon longitude resolution in output geotiff.
+     * @param dResolutionLat latitude resolution in output geotiff.
+     * @param fnMessageFeedback callback function that tells the process messages.
+     * @param fnProgressFeedback callback function that tells the progress number.
+     * 
+     * @return True : processs finished successfully. False : error occured in process.
+     */
+    bool PMTC_DLL terrain2gtif(
+        const std::string &strInputTerrainCityGML,
+        const std::string &strOutputGTif,
+        double dResolutionLon,
+        double dResolutionLat,
+        const std::function<void(MESSAGE_STATUS, const std::string &)> &fnMessageFeedback = nullptr,
+        const std::function<void(int)> &fnProgressFeedback = nullptr
+    );
 }
