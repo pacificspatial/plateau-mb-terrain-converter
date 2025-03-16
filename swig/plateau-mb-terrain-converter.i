@@ -134,4 +134,20 @@
                 strTileDir,
                 &messageCallbackHandler, &progressCallbackHandler);
     }
+
+    inline static void Terrain2GTif(
+        const std::string &strInputTerrainCityGML,
+        const std::string &strOutputGTif,
+        double dResolutionLon,
+        double dResolutionLat,
+            PMTCFeedback *pFeedback)
+    {
+        gpFeedback = pFeedback;
+        pmtc::terrain2gtif(
+            strInputTerrainCityGML,
+            strOutputGTif,
+            dResolutionLon,
+            dResolutionLat,
+            &messageCallbackHandler, &progressCallbackHandler);
+    }
 %}

@@ -112,3 +112,19 @@ fill_zero_tileset [input directory] [(option)output directory]
 - 対象ディレクトリ
 - 出力ディレクトリ（オプション）
   出力ディレクトリを省略すると対象のディレクトリの画像を上書きします。
+
+## plateau2gtif
+
+#### コマンドライン
+```
+plateau2gtif Usage:
+plateau2gtif [input file] [output file] [longitude resolution] [latitude resolution]
+```
+CityGML形式のPLATEAU地形モデル（TIN）をGeoTIFFに変換します。
+
+#### 引数
+- 入力ファイルへのパス
+  - 入力ファイルはCityGML形式のPLATEAU地形モデル（TIN）である必要があります。
+- 出力GeoTIFFファイルへのパス
+- 経度の解像度（°）
+- 緯度の解像度（°）

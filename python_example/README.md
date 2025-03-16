@@ -128,3 +128,25 @@ def Fill_zero(
 - strTileDir : 入力ディレクトリ
 - pFeedback : コールバックオブジェクト（上記参照）
 
+## Terrain2GTif
+```python
+def Terrain2GTif(
+  strInputTerrainCityGML : str, 
+  strOutputGTif : str, 
+  dResolutionLon : float, 
+  dResolutionLat : float, 
+  pFeedback : myFeedback ) -> bool:
+```
+ CityGML形式のPLATEAU地形モデル（TIN）をGeoTIFFに変換します。出力GeoTIFFのNoDataの値には-9999を割り当てます。
+
+#### 引数
+- strInputTerrainCityGML : 入力ファイル名（gml）
+- strOutputGTif : 出力ファイル名(tif)
+- dResolutionLon : 経度の地上解像度（°）
+- dResolutionLat : 緯度の地上解像度（°）
+- pFeedback : コールバックオブジェクト（上記参照）
+
+#### 戻り値
+- true : 変換成功
+- false : 変換失敗
+
