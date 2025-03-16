@@ -124,3 +124,30 @@ namespace pmtc
 - strTileDir : 入力ディレクトリ
 - fnMessageFeedback : メッセージコールバック関数
 - fnProgressFeedback : 進捗コールバック関数
+
+## terrain2gtif
+```c++
+namespace pmtc
+{
+    bool PMTC_DLL terrain2gtif(
+        const std::string &strInputTerrainCityGML,
+        const std::string &strOutputGTif,
+        double dResolutionLon,
+        double dResolutionLat,
+        const std::function<void(MESSAGE_STATUS, const std::string &)> &fnMessageFeedback = nullptr,
+        const std::function<void(int)> &fnProgressFeedback = nullptr
+    );
+}
+```
+ CityGML形式のPLATEAU地形モデル（TIN）をGeoTIFFに変換します。出力GeoTIFFのNoDataの値には-9999を割り当てます。
+
+#### 引数
+- strInputTerrainCityGML : 入力ファイル名（gml）
+- strOutputGTif : 出力ファイル名(tif)
+- dResolutionLon : 経度の地上解像度（°）
+- dResolutionLat : 緯度の地上解像度（°）
+- fnMessageFeedback : メッセージコールバック関数
+- fnProgressFeedback : 進捗コールバック関数
+#### 戻り値
+- true : 変換成功
+- false : 変換失敗
